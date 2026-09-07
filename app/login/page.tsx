@@ -10,25 +10,36 @@ export default function LoginPage() {
   const [email, setEmail] = useState("careet@example.com");
   const [name, setName] = useState("김캐릿");
   const [password, setPassword] = useState("demo");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (hydrated && loggedIn) router.replace("/");
   }, [hydrated, loggedIn, router]);
 
-  const submit = (e?: FormEvent) => {
+  const submit = async (e?: FormEvent, demo = false) => {
     e?.preventDefault();
-    if (!email.trim()) return;
-    if (!password) return;
-    login(email || "careet@example.com", name);
+    setError("");
+    setBusy(true);
+    const result = await login(
+      demo ? "careet@example.com" : email || "careet@example.com",
+      demo ? "demo" : password,
+      demo ? "김캐릿" : name,
+    );
+    setBusy(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
     router.replace("/");
   };
 
   return (
     <div className="login-page">
-      <form className="login-card" onSubmit={submit}>
+      <form className="login-card" onSubmit={(e) => submit(e)}>
         <div className="logo">Careet</div>
         <h1>이메일로 로그인</h1>
-        <p>트렌드를 읽고, 바로 실행할 투두로 옮깁니다. 데모는 아무 비밀번호나 됩니다.</p>
+        <p>처음 쓰는 이메일은 이 비밀번호로 가입됩니다. 데모 계정은 careet@example.com / demo 입니다.</p>
         <label>
           이름
           <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
@@ -54,17 +65,11 @@ export default function LoginPage() {
             required
           />
         </label>
-        <button className="btn primary" type="submit">
-          로그인
+        {error ? <div className="err">{error}</div> : null}
+        <button className="btn primary" type="submit" disabled={busy}>
+          {busy ? "확인 중…" : "로그인"}
         </button>
-        <button
-          className="btn ghost"
-          type="button"
-          onClick={() => {
-            login("careet@example.com", "김캐릿");
-            router.replace("/");
-          }}
-        >
+        <button className="btn ghost" type="button" disabled={busy} onClick={() => submit(undefined, true)}>
           데모 계정으로 시작
         </button>
         <a className="login-home" href="/">

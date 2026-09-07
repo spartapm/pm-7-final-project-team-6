@@ -10,24 +10,46 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { ARTICLES, SEED_TODOS } from "./data";
-import { uid } from "./format";
-import type { AppState, Article, Draft, Note } from "./types";
+import { ARTICLES, COUPON_CATALOG, EDITOR_PASSWORD, SEED_TODOS, isEditorEmail } from "./data";
+import { hashPassword, uid } from "./format";
+import type { AppState, Article, Draft, Note, Prefs } from "./types";
+import { mergePrefs } from "./types";
 import { deleteAccount, pullAccount, pushAccount, type CloudStatus } from "./cloud";
 
 const KEY = "careet:v2";
+const PW_KEY = "careet:pw";
 const SESSION_MS = 30 * 24 * 60 * 60 * 1000;
 
 export function accountIdFor(email: string) {
   return `careet_${email.trim().toLowerCase()}`;
 }
 
-function mergeArticles(extras: Article[]): Article[] {
-  const extra = extras.filter((a) => a?.id && !ARTICLES.some((b) => b.id === a.id));
+function mergeArticles(extras: Article[], email = ""): Article[] {
+  const extra = isEditorEmail(email)
+    ? extras.filter((a) => a?.id && !ARTICLES.some((b) => b.id === a.id))
+    : [];
   return [...extra, ...ARTICLES];
 }
 
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function readPwMap(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(PW_KEY) || "{}") as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
+
+function writePwMap(map: Record<string, string>) {
+  localStorage.setItem(PW_KEY, JSON.stringify(map));
+}
+
 function empty(partial?: Partial<AppState>): AppState {
+  const prefs = mergePrefs(partial?.prefs);
   return {
     accountId: "",
     loggedIn: false,
@@ -43,6 +65,7 @@ function empty(partial?: Partial<AppState>): AppState {
     savedIds: [],
     notes: [],
     ...partial,
+    prefs,
   };
 }
 
@@ -59,9 +82,10 @@ function load(): AppState {
     return empty({
       ...parsed,
       extraArticles: extras,
-      articles: mergeArticles(extras),
+      articles: mergeArticles(extras, parsed.email ?? ""),
       loggedIn: expired ? false : Boolean(parsed.loggedIn),
       loginAt: expired ? null : loginAt,
+      prefs: mergePrefs(parsed.prefs),
     });
   } catch {
     return fallback;
@@ -81,15 +105,18 @@ function cloudPayload(s: AppState) {
     readIds: s.readIds,
     savedIds: s.savedIds,
     notes: s.notes,
+    prefs: s.prefs,
   };
 }
+
+type LoginResult = { ok: true } | { ok: false; error: string };
 
 type Store = AppState & {
   hydrated: boolean;
   cloudStatus: CloudStatus;
   toast: string | null;
   showToast: (msg: string) => void;
-  login: (email: string, name?: string) => void;
+  login: (email: string, password: string, name?: string) => Promise<LoginResult>;
   logout: () => void;
   withdraw: () => void;
   saveProfile: (input: { name: string; email: string; role: string }) => void;
@@ -105,6 +132,8 @@ type Store = AppState & {
   deleteNote: (id: string) => void;
   saveDraft: (draft: Omit<Draft, "id" | "updatedAt"> & { id?: string }) => Draft;
   deleteDraft: (id: string) => void;
+  deleteExtraArticle: (id: string) => void;
+  isEditor: boolean;
   publishArticle: (input: {
     category: string;
     title: string;
@@ -113,6 +142,11 @@ type Store = AppState & {
     criteria: [boolean, boolean, boolean];
     thumbnail: string;
   }) => Article | { error: string };
+  subscribeLetter: (email: string) => void;
+  unsubscribeLetter: () => void;
+  redeemCoupon: (code: string) => string | null;
+  claimDailyPoints: () => string | null;
+  upgradePlan: () => string | null;
 };
 
 const Ctx = createContext<Store | null>(null);
@@ -134,6 +168,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setCloudStatus(status);
   }, []);
 
+  const patchPrefs = useCallback((fn: (prefs: Prefs) => Prefs) => {
+    setState((s) => ({ ...s, prefs: fn(s.prefs) }));
+  }, []);
+
   const runPull = useCallback(
     async (accountId: string, seed?: AppState) => {
       if (!accountId) return;
@@ -145,7 +183,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         remote.todos.length === 0 &&
         remote.drafts.length === 0 &&
         remote.extraArticles.length === 0 &&
-        !remote.loginAt;
+        !remote.loginAt &&
+        !remote.prefs.passwordHash;
       if (emptyRemote && seed?.todos.length) {
         applyPushStatus(await pushAccount(cloudPayload({ ...seed, accountId })));
         return;
@@ -161,10 +200,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           todos: remote.todos,
           drafts: remote.drafts,
           extraArticles: extras,
-          articles: mergeArticles(extras),
+          articles: mergeArticles(extras, remote.email || s.email),
           readIds: remote.readIds,
           savedIds: remote.savedIds,
           notes: remote.notes,
+          prefs: mergePrefs({
+            ...s.prefs,
+            ...remote.prefs,
+            passwordHash: remote.prefs.passwordHash || s.prefs.passwordHash,
+          }),
         };
       });
     },
@@ -202,29 +246,63 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     state.name,
     state.email,
     state.role,
+    state.prefs,
     applyPushStatus,
   ]);
 
   const login = useCallback(
-    (email: string, name?: string) => {
+    async (email: string, password: string, name?: string): Promise<LoginResult> => {
       const clean = email.trim().toLowerCase();
+      if (!clean) return { ok: false, error: "이메일을 입력해주세요" };
+      if (!password) return { ok: false, error: "비밀번호를 입력해주세요" };
+      const hash = await hashPassword(password);
       const id = accountIdFor(clean);
-      const isDemo = clean === "careet@example.com" || clean === "";
+      const isDemo = clean === "careet@example.com";
+      const isEditor = isEditorEmail(clean);
+      if (isEditor && password !== EDITOR_PASSWORD) {
+        return { ok: false, error: "비밀번호가 일치하지 않습니다" };
+      }
+      const localHash = readPwMap()[clean] || "";
+      const pulled = await pullAccount(id);
+      const remote = pulled.status === "ok" ? pulled.data : undefined;
+      const stored = remote?.prefs.passwordHash || localHash;
+      if (!isEditor && stored && stored !== hash) {
+        return { ok: false, error: "비밀번호가 일치하지 않습니다" };
+      }
+      writePwMap({ ...readPwMap(), [clean]: hash });
+      applyPushStatus(pulled.status);
+      const hasRemote =
+        Boolean(remote?.loginAt) ||
+        Boolean(remote?.prefs.passwordHash) ||
+        Boolean(remote?.todos.length) ||
+        Boolean(remote?.extraArticles.length);
+      const firstAuth = !stored;
       const next = empty({
         accountId: id,
         loggedIn: true,
         loginAt: Date.now(),
-        email: clean || "careet@example.com",
-        name: name?.trim() || "김캐릿",
-        todos: isDemo ? SEED_TODOS : [],
-        readIds: isDemo ? ["chaekeup"] : [],
-        savedIds: isDemo ? ["danggim"] : [],
+        email: clean,
+        name: isEditor ? "캐릿 에디터" : name?.trim() || remote?.name || "김캐릿",
+        role: isEditor ? "에디터" : remote?.role || "트렌드 담당자",
+        todos: hasRemote ? (remote?.todos ?? []) : isDemo ? SEED_TODOS : [],
+        drafts: hasRemote ? (remote?.drafts ?? []) : [],
+        extraArticles: hasRemote ? (remote?.extraArticles ?? []) : [],
+        articles: mergeArticles(hasRemote ? (remote?.extraArticles ?? []) : [], clean),
+        readIds: hasRemote ? (remote?.readIds ?? []) : isDemo ? ["chaekeup"] : [],
+        savedIds: hasRemote ? (remote?.savedIds ?? []) : isDemo ? ["danggim"] : [],
+        notes: hasRemote ? (remote?.notes ?? []) : [],
+        prefs: mergePrefs({
+          ...(hasRemote ? remote?.prefs : isDemo ? { points: 800, plan: "free" } : {}),
+          passwordHash: hash,
+          ...(isDemo && firstAuth ? { points: Math.max(remote?.prefs.points ?? 0, 800) } : {}),
+        }),
       });
       setState(next);
       showToast("로그인되었어요");
-      void runPull(id, next);
+      if (pulled.status === "ok") void pushAccount(cloudPayload(next)).then(applyPushStatus);
+      return { ok: true };
     },
-    [runPull, showToast],
+    [applyPushStatus, showToast],
   );
 
   const logout = useCallback(() => {
@@ -233,8 +311,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [showToast]);
 
   const withdraw = useCallback(() => {
-    const id = stateRef.current.accountId;
-    if (id) void deleteAccount(id);
+    const current = stateRef.current;
+    if (current.accountId) void deleteAccount(current.accountId);
+    if (current.email) {
+      const map = readPwMap();
+      delete map[current.email];
+      writePwMap(map);
+    }
     localStorage.removeItem(KEY);
     setState(empty());
     showToast("탈퇴가 완료되었습니다");
@@ -336,6 +419,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, drafts: s.drafts.filter((d) => d.id !== id) }));
   }, []);
 
+  const deleteExtraArticle = useCallback((id: string) => {
+    setState((s) => {
+      const extraArticles = s.extraArticles.filter((a) => a.id !== id);
+      return {
+        ...s,
+        extraArticles,
+        articles: mergeArticles(extraArticles, s.email),
+      };
+    });
+    showToast("발행글을 삭제했습니다");
+  }, [showToast]);
+
   const publishArticle = useCallback(
     (input: {
       category: string;
@@ -345,6 +440,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       criteria: [boolean, boolean, boolean];
       thumbnail: string;
     }): Article | { error: string } => {
+      if (!isEditorEmail(stateRef.current.email)) return { error: "에디터 계정만 발행할 수 있습니다" };
       if (!input.category.trim()) return { error: "카테고리를 선택해주세요" };
       if (!input.title.trim()) return { error: "제목을 입력해주세요" };
       if (!input.thumbnail) return { error: "썸네일을 업로드해주세요" };
@@ -375,12 +471,76 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setState((s) => ({
         ...s,
         extraArticles: [article, ...s.extraArticles],
-        articles: mergeArticles([article, ...s.extraArticles]),
+        articles: mergeArticles([article, ...s.extraArticles], s.email),
       }));
       return article;
     },
     [],
   );
+
+  const subscribeLetter = useCallback(
+    (email: string) => {
+      const letterEmail = email.trim().toLowerCase();
+      if (!letterEmail || !letterEmail.includes("@")) {
+        showToast("이메일 형식을 확인해주세요");
+        return;
+      }
+      patchPrefs((p) => ({
+        ...p,
+        letter: true,
+        letterEmail,
+        letterBonus: true,
+        points: p.letterBonus ? p.points : p.points + 50,
+      }));
+      showToast(stateRef.current.prefs.letterBonus ? "구독 정보가 갱신되었습니다" : "트렌드 레터를 구독했습니다 · 50P");
+    },
+    [patchPrefs, showToast],
+  );
+
+  const unsubscribeLetter = useCallback(() => {
+    patchPrefs((p) => ({ ...p, letter: false }));
+    showToast("트렌드 레터 구독을 해지했습니다");
+  }, [patchPrefs, showToast]);
+
+  const redeemCoupon = useCallback(
+    (raw: string) => {
+      const code = raw.trim().toUpperCase();
+      if (!code) return "쿠폰 코드를 입력해주세요";
+      const catalog = COUPON_CATALOG.find((c) => c.code === code);
+      if (!catalog) return "유효하지 않은 쿠폰입니다";
+      const current = stateRef.current.prefs;
+      if (current.coupons.some((c) => c.code === code)) return "이미 등록한 쿠폰입니다";
+      patchPrefs((p) => {
+        const next = {
+          ...p,
+          coupons: [{ id: uid("cpn"), code, title: catalog.title, used: true }, ...p.coupons],
+        };
+        if (catalog.perk === "points") next.points += catalog.points ?? 0;
+        if (catalog.perk === "plus") next.plan = "plus";
+        return next;
+      });
+      showToast(`${catalog.title} 적용`);
+      return null;
+    },
+    [patchPrefs, showToast],
+  );
+
+  const claimDailyPoints = useCallback(() => {
+    const today = todayKey();
+    if (stateRef.current.prefs.lastPointClaim === today) return "오늘은 이미 포인트를 받았습니다";
+    patchPrefs((p) => ({ ...p, lastPointClaim: today, points: p.points + 100 }));
+    showToast("출석 포인트 100P를 받았습니다");
+    return null;
+  }, [patchPrefs, showToast]);
+
+  const upgradePlan = useCallback(() => {
+    const p = stateRef.current.prefs;
+    if (p.plan === "plus") return "이미 캐릿 플러스입니다";
+    if (p.points < 2000) return "플러스 업그레이드에는 2,000P가 필요합니다";
+    patchPrefs((prev) => ({ ...prev, plan: "plus", points: prev.points - 2000 }));
+    showToast("캐릿 플러스로 업그레이드했습니다");
+    return null;
+  }, [patchPrefs, showToast]);
 
   const value = useMemo<Store>(
     () => ({
@@ -405,7 +565,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       deleteNote,
       saveDraft,
       deleteDraft,
+      deleteExtraArticle,
       publishArticle,
+      subscribeLetter,
+      unsubscribeLetter,
+      redeemCoupon,
+      claimDailyPoints,
+      upgradePlan,
+      isEditor: isEditorEmail(state.email),
     }),
     [
       state,
@@ -429,7 +596,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       deleteNote,
       saveDraft,
       deleteDraft,
+      deleteExtraArticle,
       publishArticle,
+      subscribeLetter,
+      unsubscribeLetter,
+      redeemCoupon,
+      claimDailyPoints,
+      upgradePlan,
     ],
   );
 

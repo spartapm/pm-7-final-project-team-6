@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { SiteShell } from "@/components/chrome";
 import { TodoLayer } from "@/components/TodoLayer";
 import { useStore } from "@/lib/store";
@@ -12,6 +12,7 @@ export default function ArticlePage() {
   const router = useRouter();
   const { articles, markRead, addNote, loggedIn } = useStore();
   const article = articles.find((a) => a.id === id);
+  const [scale, setScale] = useState(1);
 
   useEffect(() => {
     if (article) markRead(article.id);
@@ -31,7 +32,7 @@ export default function ArticlePage() {
   return (
     <SiteShell>
       <div className="article-page">
-        <div className="article">
+        <div className="article" style={{ zoom: scale }}>
           <Link href="/" className="back">
             ‹ 홈으로
           </Link>
@@ -91,7 +92,11 @@ export default function ArticlePage() {
           ))}
         </div>
       </div>
-      <TodoLayer article={article} />
+      <TodoLayer
+        article={article}
+        scale={scale}
+        onCycleScale={() => setScale((s) => (s === 1 ? 1.12 : s === 1.12 ? 1.24 : 1))}
+      />
     </SiteShell>
   );
 }

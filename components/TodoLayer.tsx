@@ -2,11 +2,19 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { IconBookmark, IconCheck, IconList, IconShare, IconTop } from "./icons";
+import { IconBookmark, IconCheck, IconList, IconPencil, IconShare, IconTop } from "./icons";
 import { useStore } from "@/lib/store";
 import type { Article } from "@/lib/types";
 
-export function TodoLayer({ article }: { article: Article }) {
+export function TodoLayer({
+  article,
+  scale,
+  onCycleScale,
+}: {
+  article: Article;
+  scale: number;
+  onCycleScale: () => void;
+}) {
   const router = useRouter();
   const {
     loggedIn,
@@ -15,10 +23,13 @@ export function TodoLayer({ article }: { article: Article }) {
     todos,
     toggleSave,
     isSaved,
+    addNote,
     showToast,
   } = useStore();
   const [open, setOpen] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
+  const [composer, setComposer] = useState(false);
+  const [draft, setDraft] = useState("");
   const hasTodos = article.todos.length > 0;
   const mine = todos.length;
   const saved = isSaved(article.id);
@@ -35,11 +46,47 @@ export function TodoLayer({ article }: { article: Article }) {
     window.setTimeout(() => setFlash(null), 1400);
   };
 
+  const saveNote = (text: string) => {
+    const next = text.trim();
+    if (!next) {
+      showToast("남길 문장을 입력하거나 본문을 드래그하세요");
+      return;
+    }
+    if (!loggedIn) {
+      router.push("/login");
+      return;
+    }
+    addNote({ articleId: article.id, articleTitle: article.title, text: next });
+    setDraft("");
+    setComposer(false);
+  };
+
+  const onPencil = () => {
+    setOpen(false);
+    const selected = window.getSelection()?.toString().trim() || "";
+    if (selected) {
+      saveNote(selected);
+      return;
+    }
+    setComposer(true);
+  };
+
   return (
     <>
       <div className="rail">
         <button className="rail-btn" type="button" aria-label="맨 위로" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
           <IconTop />
+        </button>
+        <button
+          className={`rail-btn type${scale > 1 ? " on" : ""}`}
+          type="button"
+          aria-label="글자 크기"
+          onClick={onCycleScale}
+        >
+          가
+        </button>
+        <button className="rail-btn" type="button" aria-label="밑줄 노트" onClick={onPencil}>
+          <IconPencil />
         </button>
         <button
           className={`rail-btn${saved ? " on" : ""}`}
@@ -72,13 +119,36 @@ export function TodoLayer({ article }: { article: Article }) {
             className={`todo-fab${open ? " open" : ""}`}
             type="button"
             aria-label="투두 리스트"
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => {
+            setComposer(false);
+            setOpen((v) => !v);
+          }}
           >
             <IconList />
             {!open && mine > 0 ? <span className="count">{mine}</span> : null}
           </button>
         ) : null}
       </div>
+      {composer ? (
+        <aside className="panel note-composer">
+          <div className="panel-h">
+            <span>밑줄 노트</span>
+            <button type="button" onClick={() => setComposer(false)} aria-label="닫기">
+              ×
+            </button>
+          </div>
+          <p className="note">본문을 드래그한 뒤 연필을 누르거나, 아래에 직접 적어 담을 수 있습니다.</p>
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="남기고 싶은 문장"
+            rows={5}
+          />
+          <button className="panel-cta" type="button" onClick={() => saveNote(draft)}>
+            노트에 담기
+          </button>
+        </aside>
+      ) : null}
       {open && hasTodos ? (
         <aside className="panel">
           <div className="panel-h">

@@ -1,4 +1,5 @@
-import type { Article, Draft, Note, UserTodo } from "./types";
+import type { Article, Draft, Note, Prefs, UserTodo } from "./types";
+import { mergePrefs } from "./types";
 import { getSupabase, isMissingTable } from "./supabase";
 
 export type CloudStatus = "ok" | "missing-table" | "error" | "off";
@@ -15,6 +16,7 @@ export type CloudAccount = {
   readIds: string[];
   savedIds: string[];
   notes: Note[];
+  prefs: Prefs;
 };
 
 function toIso(ms: number) {
@@ -59,6 +61,7 @@ export async function pullAccount(accountId: string): Promise<{
         readIds: [],
         savedIds: [],
         notes: [],
+        prefs: mergePrefs(),
       },
     };
   }
@@ -87,6 +90,7 @@ export async function pullAccount(accountId: string): Promise<{
       readIds: (row.read_ids as string[]) ?? [],
       savedIds: (row.saved_ids as string[]) ?? [],
       notes: (row.notes as Note[]) ?? [],
+      prefs: mergePrefs(row.prefs as Partial<Prefs> | null),
       todos: (todoRes.data ?? []).map((t) => ({
         id: t.id as string,
         text: t.text as string,
@@ -113,7 +117,7 @@ export async function pushAccount(input: CloudAccount): Promise<CloudStatus> {
   const sb = getSupabase();
   if (!sb) return "off";
 
-  const accountRes = await sb.from("accounts").upsert({
+  const baseAccount = {
     id: input.id,
     name: input.name,
     email: input.email,
@@ -124,7 +128,11 @@ export async function pushAccount(input: CloudAccount): Promise<CloudStatus> {
     read_ids: input.readIds,
     saved_ids: input.savedIds,
     updated_at: new Date().toISOString(),
-  });
+  };
+  let accountRes = await sb.from("accounts").upsert({ ...baseAccount, prefs: input.prefs });
+  if (accountRes.error && /prefs/i.test(accountRes.error.message)) {
+    accountRes = await sb.from("accounts").upsert(baseAccount);
+  }
   if (accountRes.error) {
     if (isMissingTable(accountRes.error)) return "missing-table";
     console.warn("[supabase] accounts", accountRes.error.message);

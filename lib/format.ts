@@ -20,3 +20,10 @@ export function formatDateTime(ts: number) {
   const min = String(d.getMinutes()).padStart(2, "0");
   return `${y}.${m}.${day} ${h}:${min}`;
 }
+
+export async function hashPassword(password: string) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`careet:${password}`));
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}

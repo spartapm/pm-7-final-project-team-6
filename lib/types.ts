@@ -62,6 +62,39 @@ export type Note = {
   createdAt: number;
 };
 
+export type Coupon = {
+  id: string;
+  code: string;
+  title: string;
+  used: boolean;
+};
+
+export type Prefs = {
+  passwordHash: string;
+  letter: boolean;
+  letterEmail: string;
+  letterBonus: boolean;
+  plan: "free" | "plus";
+  points: number;
+  lastPointClaim: string;
+  coupons: Coupon[];
+};
+
+export const defaultPrefs = (): Prefs => ({
+  passwordHash: "",
+  letter: false,
+  letterEmail: "",
+  letterBonus: false,
+  plan: "free",
+  points: 0,
+  lastPointClaim: "",
+  coupons: [],
+});
+
+export function mergePrefs(input?: Partial<Prefs> | null): Prefs {
+  return { ...defaultPrefs(), ...(input ?? {}) };
+}
+
 export type AppState = {
   accountId: string;
   loggedIn: boolean;
@@ -76,4 +109,5 @@ export type AppState = {
   readIds: string[];
   savedIds: string[];
   notes: Note[];
+  prefs: Prefs;
 };

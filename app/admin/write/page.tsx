@@ -24,7 +24,7 @@ const emptyForm = {
 
 export default function WritePage() {
   const router = useRouter();
-  const { hydrated, loggedIn, saveDraft, drafts, deleteDraft, publishArticle, showToast } = useStore();
+  const { hydrated, loggedIn, isEditor, name, extraArticles, saveDraft, drafts, deleteDraft, deleteExtraArticle, publishArticle, showToast } = useStore();
   const [form, setForm] = useState(emptyForm);
   const [draftId, setDraftId] = useState<string | undefined>();
   const [modal, setModal] = useState<Modal>(null);
@@ -39,8 +39,13 @@ export default function WritePage() {
   const filledTodos = form.todos.map((t) => t.trim()).filter(Boolean);
 
   useEffect(() => {
-    if (hydrated && !loggedIn) router.replace("/login");
-  }, [hydrated, loggedIn, router]);
+    if (!hydrated) return;
+    if (!loggedIn) {
+      router.replace("/login");
+      return;
+    }
+    if (!isEditor) router.replace("/");
+  }, [hydrated, loggedIn, isEditor, router]);
 
   useEffect(() => {
     const locked = modal === "required" || modal === "publish" || modal === "no-todo" || modal === "one-todo" || modal === "done";
@@ -158,7 +163,7 @@ export default function WritePage() {
     todoRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
-  if (!loggedIn) return null;
+  if (!loggedIn || !isEditor) return null;
 
   return (
     <div className="admin">
@@ -170,7 +175,7 @@ export default function WritePage() {
           <span className="admin-badge">ADMIN</span>
         </div>
         <div>
-          에디터: 김지연
+          에디터: {name}
           {lastSaved ? <span className="note"> · 마지막 저장: {formatDateTime(lastSaved)}</span> : null}
         </div>
       </header>
@@ -426,8 +431,9 @@ export default function WritePage() {
       {modal === "archive" ? (
         <div className="dim" onClick={() => setModal(null)}>
           <div className="modal archive-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>임시저장 글</h2>
-            <p>총 {drafts.length}개</p>
+            <h2>보관함</h2>
+            <p>임시저장 {drafts.length}개 · 발행글 {extraArticles.length}개</p>
+            <h3 className="subhead">임시저장 글</h3>
             {drafts.length === 0 ? (
               <div className="empty">임시저장된 글이 없습니다</div>
             ) : (
@@ -451,6 +457,29 @@ export default function WritePage() {
                 >
                   <b>{d.title || "제목 없음"}</b>
                   <div className="note">{formatDateTime(d.updatedAt)}</div>
+                </div>
+              ))
+            )}
+            <h3 className="subhead">발행된 글</h3>
+            {extraArticles.length === 0 ? (
+              <div className="empty">에디터가 발행한 추가 글이 없습니다</div>
+            ) : (
+              extraArticles.map((a) => (
+                <div key={a.id} className="draft-item published-item">
+                  <div>
+                    <b>{a.title}</b>
+                    <div className="note">{a.date}</div>
+                  </div>
+                  <button
+                    className="btn ghost"
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm("이 발행글을 홈에서 삭제할까요?")) deleteExtraArticle(a.id);
+                    }}
+                  >
+                    삭제
+                  </button>
                 </div>
               ))
             )}

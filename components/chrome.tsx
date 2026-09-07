@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { FormEvent, useEffect, useRef, useState } from "react";
-import { GNB, MENU_ITEMS } from "@/lib/data";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, Suspense, useEffect, useRef, useState } from "react";
+import { CATEGORIES, GNB, MENU_ITEMS } from "@/lib/data";
 import { progressOf, useStore } from "@/lib/store";
 import { IconProfile, IconSearch } from "./icons";
 
@@ -16,17 +16,11 @@ export function TopBar() {
   return (
     <header className="topbar">
       <nav className="gnb">
-        {GNB.map((g) =>
-          g.href ? (
-            <Link key={g.label} href={g.href}>
-              {g.label}
-            </Link>
-          ) : (
-            <span key={g.label} className="muted">
-              {g.label}
-            </span>
-          ),
-        )}
+        {GNB.map((g) => (
+          <Link key={g.label} href={g.href}>
+            {g.label}
+          </Link>
+        ))}
       </nav>
       {loggedIn ? (
         <div className="gauge-wrap">
@@ -54,21 +48,33 @@ export function TopBar() {
   );
 }
 
-export function SubNav({ onHero = false }: { onHero?: boolean }) {
-  const { loggedIn, logout, showToast } = useStore();
+function SubNavInner({ onHero = false }: { onHero?: boolean }) {
+  const { loggedIn, logout, email, prefs, isEditor, subscribeLetter, unsubscribeLetter } = useStore();
   const [open, setOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
+  const [letterOpen, setLetterOpen] = useState(false);
+  const [letterEmail, setLetterEmail] = useState("");
   const [q, setQ] = useState("");
   const ref = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const router = useRouter();
+  const cat = useSearchParams().get("cat") || "";
 
   useEffect(() => {
     setOpen(false);
-  }, [pathname]);
+    setViewOpen(false);
+  }, [pathname, cat]);
+
+  useEffect(() => {
+    setLetterEmail(prefs.letterEmail || email);
+  }, [prefs.letterEmail, email]);
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (!ref.current?.contains(t)) setOpen(false);
+      if (!viewRef.current?.contains(t)) setViewOpen(false);
     };
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
@@ -84,11 +90,30 @@ export function SubNav({ onHero = false }: { onHero?: boolean }) {
   return (
     <div className={`subnav${onHero ? " on-hero" : ""}`}>
       <div className="sub-left">
-        <button className="chip" type="button" onClick={() => showToast("콘텐츠 보기 필터는 MVP 범위 밖입니다")}>
-          콘텐츠 보기 <span>▾</span>
-        </button>
-        <button className="letter" type="button" onClick={() => showToast("트렌드 레터는 MVP 범위 밖입니다")}>
-          트렌드 레터
+        <div ref={viewRef} className="chip-wrap">
+          <button className="chip" type="button" onClick={() => setViewOpen((v) => !v)}>
+            {cat || "콘텐츠 보기"} <span>▾</span>
+          </button>
+          {viewOpen ? (
+            <div className="view-pop">
+              <Link href="/" className={!cat ? "on" : undefined} onClick={() => setViewOpen(false)}>
+                전체
+              </Link>
+              {CATEGORIES.map((c) => (
+                <Link
+                  key={c}
+                  href={`/?cat=${encodeURIComponent(c)}`}
+                  className={cat === c ? "on" : undefined}
+                  onClick={() => setViewOpen(false)}
+                >
+                  {c}
+                </Link>
+              ))}
+            </div>
+          ) : null}
+        </div>
+        <button className="letter" type="button" onClick={() => setLetterOpen(true)}>
+          트렌드 레터{prefs.letter ? " · 구독중" : ""}
         </button>
       </div>
       <Link href="/" className="logo">
@@ -123,20 +148,16 @@ export function SubNav({ onHero = false }: { onHero?: boolean }) {
           </button>
           {open && loggedIn ? (
             <div className="profile-pop">
-              {MENU_ITEMS.map((item) =>
-                item.href ? (
-                  <Link key={item.id} href={item.href} onClick={() => setOpen(false)}>
-                    {item.label}
-                  </Link>
-                ) : (
-                  <button key={item.id} type="button" onClick={() => showToast("MVP 범위 밖의 메뉴입니다")}>
-                    {item.label}
-                  </button>
-                ),
-              )}
-              <Link href="/admin/write" onClick={() => setOpen(false)}>
-                아티클 작성
-              </Link>
+              {MENU_ITEMS.map((item) => (
+                <Link key={item.id} href={item.href} onClick={() => setOpen(false)}>
+                  {item.label}
+                </Link>
+              ))}
+              {isEditor ? (
+                <Link href="/admin/write" onClick={() => setOpen(false)}>
+                  아티클 작성
+                </Link>
+              ) : null}
               <div className="sep" />
               <button
                 type="button"
@@ -152,7 +173,78 @@ export function SubNav({ onHero = false }: { onHero?: boolean }) {
           ) : null}
         </div>
       </div>
+      {letterOpen ? (
+        <div
+          className="dim"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setLetterOpen(false);
+          }}
+        >
+          <div className="modal letter-modal" onClick={(e) => e.stopPropagation()}>
+            <h2>트렌드 레터</h2>
+            <p>매주 마이크로 트렌드와 실행 투두를 메일로 받습니다. 첫 구독 시 50P가 적립됩니다.</p>
+            <label className="letter-label">
+              수신 이메일
+              <input
+                type="email"
+                value={letterEmail}
+                onChange={(e) => setLetterEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
+            </label>
+            <div className="row">
+              {prefs.letter ? (
+                <button className="btn ghost" type="button" onClick={() => unsubscribeLetter()}>
+                  구독 해지
+                </button>
+              ) : null}
+              <button
+                className="btn primary"
+                type="button"
+                onClick={() => {
+                  if (!loggedIn) {
+                    setLetterOpen(false);
+                    router.push("/login");
+                    return;
+                  }
+                  subscribeLetter(letterEmail);
+                  setLetterOpen(false);
+                }}
+              >
+                {prefs.letter ? "이메일 변경" : "구독하기"}
+              </button>
+            </div>
+            <button className="ghost letter-close" type="button" onClick={() => setLetterOpen(false)}>
+              닫기
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+export function SubNav({ onHero = false }: { onHero?: boolean }) {
+  return (
+    <Suspense
+      fallback={
+        <div className={`subnav${onHero ? " on-hero" : ""}`}>
+          <div className="sub-left">
+            <button className="chip" type="button">
+              콘텐츠 보기 <span>▾</span>
+            </button>
+            <button className="letter" type="button">
+              트렌드 레터
+            </button>
+          </div>
+          <Link href="/" className="logo">
+            Careet
+          </Link>
+        </div>
+      }
+    >
+      <SubNavInner onHero={onHero} />
+    </Suspense>
   );
 }
 
@@ -163,7 +255,7 @@ export function Footer() {
         <strong>Careet</strong>
         트렌드를 읽으세요. 새로움을 만드세요.
         <br />
-        team-6 MVP · 투두 실행 레이어 추가분
+        캐릿 · 아티클에서 투두까지
       </div>
     </footer>
   );

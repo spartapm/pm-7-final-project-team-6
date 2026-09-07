@@ -80,3 +80,12 @@ export function IconCheck() {
     </svg>
   );
 }
+
+export function IconPencil() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
+      <path d="M11.2 3.4l3.4 3.4-8.2 8.2H3v-3.4l8.2-8.2Z" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M10.2 4.4l3.4 3.4" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}

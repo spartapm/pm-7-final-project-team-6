@@ -1,18 +1,24 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { ArticleCard } from "@/components/ArticleCard";
 import { Footer, SubNav, TopBar } from "@/components/chrome";
 import { HOME_CARD_IDS } from "@/lib/data";
 import { useStore } from "@/lib/store";
 
-export default function HomePage() {
+function HomeInner() {
+  const cat = useSearchParams().get("cat") || "";
   const { articles } = useStore();
+  const published = articles.filter((a) => a.published);
   const featured = articles.find((a) => a.id === "chaekeup") ?? articles[0];
-  const cards = HOME_CARD_IDS.map((id) => articles.find((a) => a.id === id)).filter(Boolean);
-  const extras = articles.filter(
-    (a) => a.published && !["chaekeup", ...HOME_CARD_IDS].includes(a.id as never),
-  );
+  const filtered = cat ? published.filter((a) => a.category === cat) : published;
+  const extras = filtered.filter((a) => !["chaekeup", ...HOME_CARD_IDS].includes(a.id as never));
+  const cards = cat
+    ? []
+    : HOME_CARD_IDS.map((id) => filtered.find((a) => a.id === id)).filter(Boolean);
+  const grid = cat ? filtered : [...extras, ...cards.filter(Boolean)];
 
   return (
     <div className="site">
@@ -41,16 +47,28 @@ export default function HomePage() {
       </section>
       <section className="section">
         <div className="wrap">
-          <h3>최신 콘텐츠</h3>
-          <div className="cards">
-            {extras.map((a) => (
-              <ArticleCard key={a.id} article={a} />
-            ))}
-            {cards.map((a) => (a ? <ArticleCard key={a.id} article={a} /> : null))}
-          </div>
+          <h3>{cat ? `${cat} 콘텐츠` : "최신 콘텐츠"}</h3>
+          {grid.length === 0 ? (
+            <div className="empty">
+              <strong>이 카테고리의 콘텐츠가 없습니다</strong>
+              다른 카테고리를 선택해 보세요.
+            </div>
+          ) : (
+            <div className="cards">
+              {grid.map((a) => (a ? <ArticleCard key={a.id} article={a} /> : null))}
+            </div>
+          )}
         </div>
       </section>
       <Footer />
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense>
+      <HomeInner />
+    </Suspense>
   );
 }

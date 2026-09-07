@@ -6,4 +6,5 @@ out
 *.tsbuildinfo
 .env*
 !.env.example
+.vercel
 .figma-compare

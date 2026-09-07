@@ -10,8 +10,11 @@ create table if not exists public.accounts (
   extra_articles jsonb not null default '[]'::jsonb,
   read_ids jsonb not null default '[]'::jsonb,
   saved_ids jsonb not null default '[]'::jsonb,
+  prefs jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now()
 );
+
+alter table public.accounts add column if not exists prefs jsonb not null default '{}'::jsonb;
 
 create table if not exists public.todos (
   id text primary key,
