@@ -74,6 +74,123 @@ export const ARTICLES: Article[] = [
     published: true,
   },
   {
+    id: "truefan",
+    category: "트렌드",
+    title: "요즘 브랜드들이 '찐팬'을 관리하는 방식 4가지",
+    titleBreak: "요즘 브랜드들이 '찐팬'을\n관리하는 방식 4가지",
+    dek: "요즘 브랜드들이 '찐팬'을 관리하는 방식 4가지",
+    date: "2026.09.08",
+    author: "캐릿 에디터팀",
+    label: "유행중",
+    cardTone: "lime",
+    cardEyebrow: "찐팬 관리",
+    cardLine: "트렌드",
+    cover: "/figma/home-thumb-c.png",
+    heroQuote: "",
+    lead: "",
+    sections: [],
+    bodyImages: [
+      "/figma/truefan-s1.png",
+      "/figma/truefan-s2.png",
+      "/figma/truefan-s3.png",
+      "/figma/truefan-s4.png",
+      "/figma/truefan-s5.png",
+    ],
+    todos: [
+      {
+        id: "tf-1",
+        text: "최근 게시물 중 댓글·저장 유독 높았던 게시물 3개 뽑아보기: 인사이트 확인해서 고관여 팔로워 반응 패턴 찾아 정리",
+      },
+      {
+        id: "tf-2",
+        text: "오픈채팅방 개설 조건부 초대 방식 실행 가능한지 검토: 댓글 단 사람 DM으로 초대하는 플로우, 우리 계정 규모로 가능한지 체크",
+      },
+      {
+        id: "tf-3",
+        text: "국내 Z세대 인플루언서 신뢰도, 자체 설문 문항 1개 만들기: \"브랜드 광고 vs 인플루언서 게시물 중 뭘 더 믿나요\" 초안",
+      },
+      {
+        id: "tf-4",
+        text: "현재 준비 중인 프로모션에 '한정 조건' 하나 추가해보기: 시간·장소·수량 중 하나 제약 걸어서 문구 초안 작성",
+      },
+    ],
+    published: true,
+  },
+  {
+    id: "asean",
+    category: "소비트렌드",
+    title: "다음 10년의 기회는 동남아시아에 있다.",
+    titleBreak: "다음 10년의 기회는\n동남아시아에 있다.",
+    dek: "다음 10년의 기회는 동남아시아에 있다.",
+    date: "2026.09.08",
+    author: "캐릿 에디터팀",
+    label: "유행중",
+    cardTone: "pink",
+    cardEyebrow: "동남아시아",
+    cardLine: "소비자 트렌드",
+    cover: "/figma/home-thumb-a.png",
+    heroQuote: "",
+    lead: "",
+    sections: [],
+    bodyImages: ["/figma/asean-body.png"],
+    todos: [
+      {
+        id: "as-1",
+        text: "진출 희망국 뜨는 캐릭터 IP 콜라보 사례 검색: 라부부·크라이베이비 등 표에 나온 IP로 국내 유사 브랜드 협업 사례 있는지 확인",
+      },
+      {
+        id: "as-2",
+        text: "타겟국 주요 기념일 캘린더에 표시하고 콘텐츠 기획: 인니는 라마단, 태국은 송크란 등 국가별 기념일에 맞춘 프로모션 아이디어 1개",
+      },
+      {
+        id: "as-3",
+        text: "타겟국 주요 커머스앱 입점조건 검색: 쇼피·라자다 등 표에 나온 플랫폼별 브랜드 입점 절차·수수료 확인",
+      },
+      {
+        id: "as-4",
+        text: "표의 마케팅 방식 중 1개 골라 실행 가능성 검토: 라이브 커머스·팝업스토어 등 국가별 특화 방식이 우리 리소스로 가능한지 체크",
+      },
+    ],
+    published: true,
+  },
+  {
+    id: "ghost",
+    category: "트렌드",
+    title: "전 세계 알고리즘을 흔드는 콘셉트, '괴담'",
+    titleBreak: "전 세계 알고리즘을 흔드는\n콘셉트, '괴담'",
+    dek: "전 세계 알고리즘을 흔드는 콘셉트, '괴담'",
+    date: "2026.09.08",
+    author: "캐릿 에디터팀",
+    label: "유행중",
+    cardTone: "green",
+    cardEyebrow: "괴담 트렌드",
+    cardLine: "요즘 대세",
+    cover: "/figma/home-thumb-b.png",
+    heroQuote: "",
+    lead: "",
+    sections: [],
+    bodyImages: ["/figma/ghost-body.png"],
+    todos: [
+      {
+        id: "gh-1",
+        text: "백룸처럼 브랜드 매장을 괴담 컨셉으로 패러디할 여지 검토: 이케아·맥도날드처럼 우리 매장 공간을 활용한 괴담풍 콘텐츠 아이디어 스케치",
+      },
+      {
+        id: "gh-2",
+        text: "'나폴리탄 괴담' 관련 콘텐츠 유튜브·SNS 검색해 소재 파악: 최근 활용 마케팅 사례 있는지 확인 후 우리 브랜드 적용 가능성 메모",
+      },
+      {
+        id: "gh-3",
+        text: "오프라인 괴담 체험(테크노마트 사례) 유사 공간 우리 지역서 있는지 찾기: 팝업·매장 연계 이벤트 소재로 쓸 로컬 명소 리스트업",
+      },
+      {
+        id: "gh-4",
+        text: "AI 생성 괴담 콘텐츠 포맷이 우리 계정에 맞을지 분석: 인스타 릴스 조회수 잘 나오는 AI 괴담 포맷 3개 찾아 톤 비교",
+      },
+    ],
+    published: true,
+  },
+  {
     id: "danggim",
     category: "소비트렌드",
     title: "이유 없이 그냥 산다, '땡김소비'가 뜬다",
@@ -93,6 +210,8 @@ export const ARTICLES: Article[] = [
         id: "s1",
         heading: "1. 요즘 다들 이유 없이 지르는 거, 알고 보니 이름이 있었다",
         body: "장바구니에 담아두고 비교하던 습관이 줄었습니다. 피드에서 본 순간, 할인 없이도 ‘땡겨서’ 결제하는 패턴이 반복되고 있어요. 충동이 아니라 새로운 소비 문법으로 불리기 시작했습니다.",
+        visual: { tone: "pink", kicker: "땡김소비", title: "그냥 삽니다" },
+        caption: "설명보다 감각이 먼저인 결제 장면",
       },
       {
         id: "s2",
@@ -103,12 +222,15 @@ export const ARTICLES: Article[] = [
         id: "s3",
         heading: "3. 브랜드는 지금 '땡김소비'를 어떻게 공략해야 할까",
         body: "구매 장벽을 낮추고, 인증샷이 되는 한 장면을 만들며, 카피 앵글을 ‘왜 사야 하나’에서 ‘왜 지금 끌리는지’로 바꾸는 실험이 유효합니다.",
+        visuals: [
+          { tone: "pink", kicker: "카피 앵글", title: "왜 지금 끌리는지" },
+          { tone: "lime", kicker: "한 장면", title: "3초 결제 이유" },
+        ],
       },
     ],
     todos: [
-      { id: "dg-1", text: "다음 콘텐츠 카피 한 줄, \"왜 사야 하나\" 대신 \"왜 지금 끌리는지\"를 카피 앵글로 잡아 기획해보기" },
-      { id: "dg-2", text: "인증샷 포인트 1가지를 이번 주 내로 시도해보기" },
-      { id: "dg-3", text: "SNS 콘텐츠 1개 제작 후 업로드하기" },
+      { id: "dg-1", text: "다음 콘텐츠 카피 한 줄을 \"왜 사야 하나\" 대신 \"왜 지금 끌리는지\" 앵글로 바꿔 기획해보기" },
+      { id: "dg-2", text: "3초 안에 결제 이유가 보이는 장면 1개를 이번 주 캠페인에 넣기" },
     ],
     published: true,
   },
@@ -132,6 +254,8 @@ export const ARTICLES: Article[] = [
         id: "s1",
         heading: "1. 기록하지 않는 보고가 왜 더 편할까",
         body: "문서로 남기는 순간 ‘완성도’를 요구받습니다. 음성은 휘발되기 때문에 오히려 솔직하고 빠릅니다. 완벽한 문장보다 지금 상태를 공유하는 쪽이 팀 속도를 올려 줍니다.",
+        visual: { tone: "amber", kicker: "휘발성 보고", title: "말하고 흘려보내기" },
+        caption: "남기지 않는 보고가 일상을 바꾸는 장면",
       },
       {
         id: "s2",
@@ -145,9 +269,8 @@ export const ARTICLES: Article[] = [
       },
     ],
     todos: [
-      { id: "vo-1", text: "휘발성 마케팅 보고서 작성하기" },
-      { id: "vo-2", text: "팀 미팅에서 업무 자율성 관련 아젠다 제안해보기" },
-      { id: "vo-3", text: "이번 주 내로 상사와 1:1 미팅 일정 잡기" },
+      { id: "vo-1", text: "이번 주 보고 1건을 문서 대신 3분 음성으로 먼저 공유해보기" },
+      { id: "vo-2", text: "결정·액션만 슬랙에 한 줄로 남기는 템플릿을 팀 채널에 붙여보기" },
     ],
     published: true,
   },
@@ -171,6 +294,8 @@ export const ARTICLES: Article[] = [
         id: "s1",
         heading: "1. n잡 대신 '하나만 제대로'를 택하는 사람들",
         body: "포트폴리오를 늘리는 대신, 대표 커리어 한 줄의 밀도를 높이는 선택이 눈에 띕니다. 줄이는 것이 포기가 아니라 전략이 되는 시점입니다.",
+        visual: { tone: "green", kicker: "커리어 다이어트", title: "줄여서 채우기" },
+        caption: "넓히기 대신 줄여서 채우는 커리어",
       },
       {
         id: "s2",
@@ -231,7 +356,8 @@ export const SEED_TODOS: UserTodo[] = [
   },
 ];
 
-export const HOME_CARD_IDS = ["danggim", "volatile", "career"] as const;
+export const HOME_CARD_IDS = ["asean", "truefan", "ghost"] as const;
+export const HOME_HIDDEN_IDS = ["chaekeup", "career", "danggim", "volatile"] as const;
 
 export const DICTIONARY = [
   {
@@ -242,6 +368,13 @@ export const DICTIONARY = [
     articleId: "chaekeup",
   },
   {
+    term: "찐팬",
+    reading: "진짜 팬",
+    cat: "트렌드",
+    def: "팔로워 수가 아니라 저장·공유·반복 댓글로 남는 고관여 독자. 규모보다 반응의 밀도를 본다.",
+    articleId: "truefan",
+  },
+  {
     term: "땡김소비",
     reading: "이유 없이 그냥 산다",
     cat: "소비트렌드",
@@ -249,10 +382,10 @@ export const DICTIONARY = [
     articleId: "danggim",
   },
   {
-    term: "휘발성 취미",
-    reading: "금방 증발하는 취미",
-    cat: "라이프스타일",
-    def: "오래 숙련하지 않고 한 시즌만 태우는 취미. 인증과 경험이 목적이지 마스터리가 목적이 아니다.",
+    term: "휘발성 보고",
+    reading: "남기지 않는 보고",
+    cat: "업무문화트렌드",
+    def: "완성된 문서 대신 음성·짧은 말로 상태를 공유하고, 결정만 한 줄로 남기는 업무 습관.",
     articleId: "volatile",
   },
   {
@@ -280,6 +413,13 @@ export const DICTIONARY = [
 
 export const CLIPPINGS = [
   {
+    date: "2026.09.07",
+    source: "캐릿 에디터",
+    title: "팔로워 그래프가 올라도 팬이 안 보이는 이유",
+    summary: "저장·공유·반복 댓글이 겹치는 계정이 찐팬이다. 규모보다 반응 밀도를 먼저 재는 브랜드가 늘고 있습니다.",
+    articleId: "truefan",
+  },
+  {
     date: "2026.09.04",
     source: "캐릿 에디터",
     title: "이유 없이 결제하는 세대, 브랜드 카피가 바뀐다",
@@ -296,8 +436,8 @@ export const CLIPPINGS = [
   {
     date: "2026.08.29",
     source: "컬처 브리프",
-    title: "이번 달만 하는 취미가 대세, 휘발성을 상품으로",
-    summary: "키트형 취미·원데이 클래스가 구독형 레슨보다 잘 팔립니다. 완성보다 시작의 감각.",
+    title: "기록하지 않는 보고가 팀 속도를 바꾼다",
+    summary: "완벽한 문서 대신 3분 음성. 휘발성 보고는 완성도 압박을 낮추고 실행 빈도를 올립니다.",
     articleId: "volatile",
   },
   {
@@ -343,12 +483,12 @@ export const CALENDAR = [
 ] as const;
 
 export const BILLBOARD = [
-  { rank: 1, word: "땡김소비", delta: "+18", heat: 96, articleId: "danggim" },
-  { rank: 2, word: "책없쾌", delta: "+9", heat: 88, articleId: "chaekeup" },
-  { rank: 3, word: "폰프리", delta: "+7", heat: 74, articleId: "chaekeup" },
-  { rank: 4, word: "휘발성 취미", delta: "+4", heat: 61, articleId: "volatile" },
-  { rank: 5, word: "커리어 다이어트", delta: "-2", heat: 48, articleId: "career" },
-  { rank: 6, word: "마이크로 트렌드", delta: "+3", heat: 41, articleId: "danggim" },
+  { rank: 1, word: "찐팬", delta: "+21", heat: 98, articleId: "truefan" },
+  { rank: 2, word: "땡김소비", delta: "+18", heat: 96, articleId: "danggim" },
+  { rank: 3, word: "책없쾌", delta: "+9", heat: 88, articleId: "chaekeup" },
+  { rank: 4, word: "폰프리", delta: "+7", heat: 74, articleId: "chaekeup" },
+  { rank: 5, word: "휘발성 보고", delta: "+6", heat: 61, articleId: "volatile" },
+  { rank: 6, word: "커리어 다이어트", delta: "-2", heat: 48, articleId: "career" },
 ] as const;
 
 export const COUPON_CATALOG = [

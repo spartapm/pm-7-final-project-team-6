@@ -9,7 +9,7 @@ export default function ClippingPage() {
     <SiteShell>
       <div className="catalog">
         <div className="wrap">
-          <p className="kicker">GNB</p>
+          <p className="kicker">캐릿</p>
           <h1>뉴스클리핑</h1>
           <p className="lede">에디터가 고른 한 주 브리프입니다. 제목을 누르면 관련 아티클로 이어집니다.</p>
           <div className="clip-list">

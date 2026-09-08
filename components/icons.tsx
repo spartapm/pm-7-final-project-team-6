@@ -73,10 +73,27 @@ export function IconClose() {
   );
 }
 
+export function IconPlus() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden>
+      <path d="M11 4.5v13M4.5 11h13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function IconCheck() {
   return (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-      <path d="M2 6.2l2.6 2.6L10 3.4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
+      <path d="M2.4 6.1l2.5 2.5 4.7-5.2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function IconHighlight() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
+      <path d="M4.2 12.2l7.4-7.4 2.2 2.2-7.4 7.4H4.2v-2.2Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M3.5 15.2h5.2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
     </svg>
   );
 }

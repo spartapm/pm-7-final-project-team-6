@@ -8,7 +8,7 @@ export default function CalendarPage() {
     <SiteShell>
       <div className="catalog">
         <div className="wrap">
-          <p className="kicker">GNB</p>
+          <p className="kicker">캐릿</p>
           <h1>이슈 캘린더</h1>
           <p className="lede">현장 스케치와 캠페인 송출 일정을 미리 잡아 두는 판입니다.</p>
           <ol className="cal-list">

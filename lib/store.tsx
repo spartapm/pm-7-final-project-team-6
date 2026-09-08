@@ -10,15 +10,48 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { ARTICLES, COUPON_CATALOG, EDITOR_PASSWORD, SEED_TODOS, isEditorEmail } from "./data";
+import { ARTICLES, COUPON_CATALOG, EDITOR_PASSWORD, isEditorEmail } from "./data";
 import { hashPassword, uid } from "./format";
 import type { AppState, Article, Draft, Note, Prefs } from "./types";
-import { mergePrefs } from "./types";
+import { mergePrefs, TODO_MAX } from "./types";
 import { deleteAccount, pullAccount, pushAccount, type CloudStatus } from "./cloud";
 
 const KEY = "careet:v2";
+const GUEST_KEY = "careet:guest";
 const PW_KEY = "careet:pw";
 const SESSION_MS = 30 * 24 * 60 * 60 * 1000;
+
+type GuestSnap = Pick<AppState, "todos" | "notes" | "readIds" | "savedIds" | "prefs">;
+
+function saveGuestSnap(s: AppState) {
+  if (typeof window === "undefined") return;
+  const snap: GuestSnap = {
+    todos: s.todos,
+    notes: s.notes,
+    readIds: s.readIds,
+    savedIds: s.savedIds,
+    prefs: s.prefs,
+  };
+  localStorage.setItem(GUEST_KEY, JSON.stringify(snap));
+}
+
+function readGuestSnap(): GuestSnap | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(GUEST_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<GuestSnap>;
+    return {
+      todos: parsed.todos ?? [],
+      notes: parsed.notes ?? [],
+      readIds: parsed.readIds ?? [],
+      savedIds: parsed.savedIds ?? [],
+      prefs: mergePrefs(parsed.prefs),
+    };
+  } catch {
+    return null;
+  }
+}
 
 export function accountIdFor(email: string) {
   return `careet_${email.trim().toLowerCase()}`;
@@ -124,6 +157,8 @@ type Store = AppState & {
   toggleSave: (id: string) => void;
   isSaved: (id: string) => boolean;
   addTodoFromArticle: (article: Article, todo: { id: string; text: string }) => boolean;
+  removeTodoFromArticle: (todo: { id: string; text: string }) => void;
+  addCustomTodo: (text: string) => boolean;
   isArticleTodoSaved: (todoId: string, text?: string) => boolean;
   toggleTodo: (id: string) => void;
   editTodo: (id: string, text: string) => void;
@@ -219,7 +254,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const local = load();
     setState(local);
     setHydrated(true);
-    if (local.loggedIn && local.accountId) void runPull(local.accountId, local);
+    if (local.loggedIn && local.accountId && isEditorEmail(local.email)) {
+      void runPull(local.accountId, local);
+    }
   }, [runPull]);
 
   useEffect(() => {
@@ -228,7 +265,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [hydrated, state]);
 
   useEffect(() => {
-    if (!hydrated || !state.loggedIn || !state.accountId) return;
+    if (!hydrated || !state.loggedIn || !state.accountId || !isEditorEmail(state.email)) return;
     const t = window.setTimeout(() => {
       void pushAccount(cloudPayload(stateRef.current)).then(applyPushStatus);
     }, 400);
@@ -271,42 +308,81 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
       writePwMap({ ...readPwMap(), [clean]: hash });
       applyPushStatus(pulled.status);
-      const hasRemote =
-        Boolean(remote?.loginAt) ||
-        Boolean(remote?.prefs.passwordHash) ||
-        Boolean(remote?.todos.length) ||
-        Boolean(remote?.extraArticles.length);
-      const firstAuth = !stored;
-      const next = empty({
+      const current = stateRef.current;
+      if (isEditor) {
+        if (!isEditorEmail(current.email)) saveGuestSnap(current);
+        const hasRemote =
+          Boolean(remote?.loginAt) ||
+          Boolean(remote?.prefs.passwordHash) ||
+          Boolean(remote?.todos.length) ||
+          Boolean(remote?.extraArticles.length);
+        const next = empty({
+          accountId: id,
+          loggedIn: true,
+          loginAt: Date.now(),
+          email: clean,
+          name: "캐릿 에디터",
+          role: "에디터",
+          todos: hasRemote ? (remote?.todos ?? []) : [],
+          drafts: hasRemote ? (remote?.drafts ?? []) : [],
+          extraArticles: hasRemote ? (remote?.extraArticles ?? []) : [],
+          articles: mergeArticles(hasRemote ? (remote?.extraArticles ?? []) : [], clean),
+          readIds: hasRemote ? (remote?.readIds ?? []) : [],
+          savedIds: hasRemote ? (remote?.savedIds ?? []) : [],
+          notes: hasRemote ? (remote?.notes ?? []) : [],
+          prefs: mergePrefs({
+            ...(hasRemote ? remote?.prefs : {}),
+            passwordHash: hash,
+          }),
+        });
+        setState(next);
+        showToast("에디터로 로그인했어요");
+        if (pulled.status === "ok") void pushAccount(cloudPayload(next)).then(applyPushStatus);
+        return { ok: true };
+      }
+
+      const next = {
+        ...current,
         accountId: id,
         loggedIn: true,
         loginAt: Date.now(),
         email: clean,
-        name: isEditor ? "캐릿 에디터" : name?.trim() || remote?.name || "김캐릿",
-        role: isEditor ? "에디터" : remote?.role || "트렌드 담당자",
-        todos: hasRemote ? (remote?.todos ?? []) : isDemo ? SEED_TODOS : [],
-        drafts: hasRemote ? (remote?.drafts ?? []) : [],
-        extraArticles: hasRemote ? (remote?.extraArticles ?? []) : [],
-        articles: mergeArticles(hasRemote ? (remote?.extraArticles ?? []) : [], clean),
-        readIds: hasRemote ? (remote?.readIds ?? []) : isDemo ? ["chaekeup"] : [],
-        savedIds: hasRemote ? (remote?.savedIds ?? []) : isDemo ? ["danggim"] : [],
-        notes: hasRemote ? (remote?.notes ?? []) : [],
+        name: name?.trim() || current.name || remote?.name || "김캐릿",
+        role: remote?.role || current.role || "트렌드 담당자",
+        articles: mergeArticles(current.extraArticles, clean),
         prefs: mergePrefs({
-          ...(hasRemote ? remote?.prefs : isDemo ? { points: 800, plan: "free" } : {}),
+          ...current.prefs,
+          ...(isDemo ? { points: Math.max(current.prefs.points, remote?.prefs.points ?? 0, 800) } : {}),
           passwordHash: hash,
-          ...(isDemo && firstAuth ? { points: Math.max(remote?.prefs.points ?? 0, 800) } : {}),
         }),
-      });
+      };
       setState(next);
       showToast("로그인되었어요");
-      if (pulled.status === "ok") void pushAccount(cloudPayload(next)).then(applyPushStatus);
       return { ok: true };
     },
     [applyPushStatus, showToast],
   );
 
   const logout = useCallback(() => {
-    setState((s) => empty({ accountId: s.accountId, email: s.email, name: s.name }));
+    const current = stateRef.current;
+    if (isEditorEmail(current.email)) {
+      const guest = readGuestSnap();
+      setState(
+        empty({
+          ...(guest ?? {}),
+          articles: ARTICLES,
+          extraArticles: [],
+        }),
+      );
+    } else {
+      setState((s) => ({
+        ...s,
+        loggedIn: false,
+        loginAt: null,
+        accountId: "",
+        email: "",
+      }));
+    }
     showToast("로그아웃되었어요");
   }, [showToast]);
 
@@ -360,7 +436,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         todos: [
           {
             id: sid,
-            text: todo.text,
+            text: todo.text.slice(0, TODO_MAX),
             sourceArticleId: article.id,
             sourceTitle: article.title,
             addedAt: Date.now(),
@@ -371,6 +447,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       };
     });
     return added;
+  }, []);
+
+  const removeTodoFromArticle = useCallback((todo: { id: string; text: string }) => {
+    const sid = `saved_${todo.id}`;
+    setState((s) => ({
+      ...s,
+      todos: s.todos.filter((t) => t.id !== sid && t.id !== todo.id && t.text !== todo.text),
+    }));
   }, []);
 
   const toggleTodo = useCallback((id: string) => {
@@ -385,12 +469,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!next) return;
     setState((s) => ({
       ...s,
-      todos: s.todos.map((t) => (t.id === id ? { ...t, text: next.slice(0, 50) } : t)),
+      todos: s.todos.map((t) => (t.id === id ? { ...t, text: next.slice(0, TODO_MAX) } : t)),
     }));
   }, []);
 
   const deleteTodo = useCallback((id: string) => {
     setState((s) => ({ ...s, todos: s.todos.filter((t) => t.id !== id) }));
+  }, []);
+
+  const addCustomTodo = useCallback((text: string) => {
+    const next = text.trim().slice(0, TODO_MAX);
+    if (!next) return false;
+    setState((s) => ({
+      ...s,
+      todos: [
+        {
+          id: uid("td"),
+          text: next,
+          sourceTitle: "직접 추가",
+          addedAt: Date.now(),
+          done: false,
+        },
+        ...s.todos,
+      ],
+    }));
+    return true;
   }, []);
 
   const addNote = useCallback((note: Omit<Note, "id" | "createdAt">) => {
@@ -557,6 +660,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       toggleSave,
       isSaved,
       addTodoFromArticle,
+      removeTodoFromArticle,
+      addCustomTodo,
       isArticleTodoSaved,
       toggleTodo,
       editTodo,
@@ -588,6 +693,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       toggleSave,
       isSaved,
       addTodoFromArticle,
+      removeTodoFromArticle,
+      addCustomTodo,
       isArticleTodoSaved,
       toggleTodo,
       editTodo,

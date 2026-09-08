@@ -39,7 +39,7 @@ export default function LoginPage() {
       <form className="login-card" onSubmit={(e) => submit(e)}>
         <div className="logo">Careet</div>
         <h1>이메일로 로그인</h1>
-        <p>처음 쓰는 이메일은 이 비밀번호로 가입됩니다. 데모 계정은 careet@example.com / demo 입니다.</p>
+        <p>투두 리스트는 로그인 없이 이 브라우저에만 저장됩니다. 아티클 작성이 필요하면 에디터 계정으로 들어가 주세요.</p>
         <label>
           이름
           <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
@@ -72,6 +72,7 @@ export default function LoginPage() {
         <button className="btn ghost" type="button" disabled={busy} onClick={() => submit(undefined, true)}>
           데모 계정으로 시작
         </button>
+        <p className="login-hint">에디터 · editor@careet.com / editor</p>
         <a className="login-home" href="/">
           홈으로
         </a>

@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { ArticleCard } from "@/components/ArticleCard";
 import { Footer, SubNav, TopBar } from "@/components/chrome";
-import { HOME_CARD_IDS } from "@/lib/data";
+import { HOME_CARD_IDS, HOME_HIDDEN_IDS } from "@/lib/data";
 import { useStore } from "@/lib/store";
 
 function HomeInner() {
@@ -14,7 +14,8 @@ function HomeInner() {
   const published = articles.filter((a) => a.published);
   const featured = articles.find((a) => a.id === "chaekeup") ?? articles[0];
   const filtered = cat ? published.filter((a) => a.category === cat) : published;
-  const extras = filtered.filter((a) => !["chaekeup", ...HOME_CARD_IDS].includes(a.id as never));
+  const seedHomeIds = new Set<string>([...HOME_CARD_IDS, ...HOME_HIDDEN_IDS]);
+  const extras = filtered.filter((a) => !seedHomeIds.has(a.id));
   const cards = cat
     ? []
     : HOME_CARD_IDS.map((id) => filtered.find((a) => a.id === id)).filter(Boolean);
@@ -37,9 +38,9 @@ function HomeInner() {
             <Link className="hero-side" href={`/articles/${featured.id}`}>
               <span className="trend-chip"># 라이프스타일 트렌드</span>
               <h2>
-                과몰입의 시대는 끝났다.
+                과몰입의 시대는 끝났다!
                 <br />
-                새로운 라이프스타일, 책없쾌.
+                새로운 라이프스타일: 책없쾌
               </h2>
             </Link>
           ) : null}

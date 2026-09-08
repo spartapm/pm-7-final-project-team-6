@@ -2,10 +2,21 @@ export type TrendLabel = "유행예감" | "유행중" | "유행지남" | "";
 
 export type CardTone = "pink" | "amber" | "green" | "lime";
 
+export const TODO_MAX = 120;
+
+export type ArticleVisual = {
+  tone: CardTone | "ink";
+  kicker: string;
+  title: string;
+};
+
 export type ArticleSection = {
   id: string;
   heading: string;
   body: string;
+  visual?: ArticleVisual;
+  visuals?: ArticleVisual[];
+  caption?: string;
 };
 
 export type ArticleTodo = {
@@ -32,6 +43,7 @@ export type Article = {
   published: boolean;
   thumbnail?: string;
   cover?: string;
+  bodyImages?: string[];
 };
 
 export type UserTodo = {

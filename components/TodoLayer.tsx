@@ -2,9 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { IconBookmark, IconCheck, IconList, IconPencil, IconShare, IconTop } from "./icons";
+import { IconBookmark, IconCheck, IconHighlight, IconList, IconPencil, IconShare, IconTop } from "./icons";
 import { useStore } from "@/lib/store";
 import type { Article } from "@/lib/types";
+import { TODO_MAX } from "@/lib/types";
 
 export function TodoLayer({
   article,
@@ -17,8 +18,8 @@ export function TodoLayer({
 }) {
   const router = useRouter();
   const {
-    loggedIn,
     addTodoFromArticle,
+    removeTodoFromArticle,
     isArticleTodoSaved,
     todos,
     toggleSave,
@@ -30,20 +31,32 @@ export function TodoLayer({
   const [flash, setFlash] = useState<string | null>(null);
   const [composer, setComposer] = useState(false);
   const [draft, setDraft] = useState("");
+  const [edits, setEdits] = useState<Record<string, string>>({});
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState("");
   const hasTodos = article.todos.length > 0;
   const mine = todos.length;
   const saved = isSaved(article.id);
 
+  const textOf = (todo: { id: string; text: string }) => edits[todo.id] ?? todo.text;
+
   const save = (todo: { id: string; text: string }) => {
-    if (!loggedIn) {
-      showToast("로그인 후 투두를 담을 수 있어요");
-      router.push("/login");
+    const next = { ...todo, text: textOf(todo) };
+    if (isArticleTodoSaved(todo.id, next.text)) {
+      removeTodoFromArticle(next);
       return;
     }
-    if (isArticleTodoSaved(todo.id, todo.text)) return;
-    addTodoFromArticle(article, todo);
+    addTodoFromArticle(article, next);
     setFlash(todo.id);
     window.setTimeout(() => setFlash(null), 1400);
+  };
+
+  const commitEdit = (todo: { id: string; text: string }, value: string) => {
+    const next = value.trim();
+    if (next) {
+      setEdits((prev) => ({ ...prev, [todo.id]: next.slice(0, TODO_MAX) }));
+    }
+    setEditingId(null);
   };
 
   const saveNote = (text: string) => {
@@ -52,16 +65,12 @@ export function TodoLayer({
       showToast("남길 문장을 입력하거나 본문을 드래그하세요");
       return;
     }
-    if (!loggedIn) {
-      router.push("/login");
-      return;
-    }
     addNote({ articleId: article.id, articleTitle: article.title, text: next });
     setDraft("");
     setComposer(false);
   };
 
-  const onPencil = () => {
+  const onHighlight = () => {
     setOpen(false);
     const selected = window.getSelection()?.toString().trim() || "";
     if (selected) {
@@ -85,23 +94,33 @@ export function TodoLayer({
         >
           가
         </button>
-        <button className="rail-btn" type="button" aria-label="밑줄 노트" onClick={onPencil}>
-          <IconPencil />
-        </button>
         <button
           className={`rail-btn${saved ? " on" : ""}`}
           type="button"
           aria-label="북마크"
           onClick={() => {
-            if (!loggedIn) {
-              router.push("/login");
-              return;
-            }
             toggleSave(article.id);
             showToast(saved ? "저장을 해제했습니다" : "콘텐츠를 저장했습니다");
           }}
         >
           <IconBookmark filled={saved} />
+        </button>
+        {hasTodos ? (
+          <button
+            className={`todo-fab${open ? " open" : ""}`}
+            type="button"
+            aria-label="투두 리스트"
+            onClick={() => {
+              setComposer(false);
+              setOpen((v) => !v);
+            }}
+          >
+            <IconList />
+            {!open && mine > 0 ? <span className="count">{mine}</span> : null}
+          </button>
+        ) : null}
+        <button className="rail-btn" type="button" aria-label="형광펜" onClick={onHighlight}>
+          <IconHighlight />
         </button>
         <button
           className="rail-btn"
@@ -114,20 +133,6 @@ export function TodoLayer({
         >
           <IconShare />
         </button>
-        {hasTodos ? (
-          <button
-            className={`todo-fab${open ? " open" : ""}`}
-            type="button"
-            aria-label="투두 리스트"
-            onClick={() => {
-            setComposer(false);
-            setOpen((v) => !v);
-          }}
-          >
-            <IconList />
-            {!open && mine > 0 ? <span className="count">{mine}</span> : null}
-          </button>
-        ) : null}
       </div>
       {composer ? (
         <aside className="panel note-composer">
@@ -137,7 +142,7 @@ export function TodoLayer({
               ×
             </button>
           </div>
-          <p className="note">본문을 드래그한 뒤 연필을 누르거나, 아래에 직접 적어 담을 수 있습니다.</p>
+          <p className="note">본문을 드래그한 뒤 형광펜을 누르거나, 아래에 직접 적어 담을 수 있습니다.</p>
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -159,14 +164,44 @@ export function TodoLayer({
           </div>
           <div className="panel-list">
             {article.todos.map((t) => {
-              const already = isArticleTodoSaved(t.id, t.text);
+              const already = isArticleTodoSaved(t.id, textOf(t));
               return (
                 <div key={t.id} className={`todo-row${already ? " saved" : ""}`}>
                   {flash === t.id ? <span className="save-pop">저장 완료!</span> : null}
-                  <button className="check" type="button" onClick={() => save(t)} aria-label="담기">
+                  <button className="check" type="button" onClick={() => save(t)} aria-label={already ? "담기 해제" : "담기"}>
                     {already ? <IconCheck /> : null}
                   </button>
-                  <label onClick={() => save(t)}>{t.text}</label>
+                  {editingId === t.id && !already ? (
+                    <input
+                      className="todo-edit"
+                      value={editingValue}
+                      autoFocus
+                      maxLength={TODO_MAX}
+                      onChange={(e) => setEditingValue(e.target.value)}
+                      onBlur={(e) => commitEdit(t, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitEdit(t, (e.target as HTMLInputElement).value);
+                        if (e.key === "Escape") setEditingId(null);
+                      }}
+                    />
+                  ) : (
+                    <>
+                      <label onClick={() => save(t)}>{textOf(t)}</label>
+                      {already ? null : (
+                        <button
+                          className="todo-edit-btn"
+                          type="button"
+                          aria-label="문구 수정"
+                          onClick={() => {
+                            setEditingValue(textOf(t));
+                            setEditingId(t.id);
+                          }}
+                        >
+                          <IconPencil />
+                        </button>
+                      )}
+                    </>
+                  )}
                 </div>
               );
             })}
@@ -174,7 +209,7 @@ export function TodoLayer({
           <button
             className="panel-cta"
             type="button"
-            onClick={() => router.push(loggedIn ? "/me" : "/login")}
+            onClick={() => router.push("/me")}
           >
             나의 투두로 가기
           </button>

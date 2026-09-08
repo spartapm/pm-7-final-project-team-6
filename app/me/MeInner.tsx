@@ -8,6 +8,7 @@ import { SiteShell } from "@/components/chrome";
 import { IconCheck, IconClose, IconEdit } from "@/components/icons";
 import { formatDotDate } from "@/lib/format";
 import { progressOf, useStore } from "@/lib/store";
+import { TODO_MAX } from "@/lib/types";
 
 type Tab = "read" | "saved" | "todos" | "notes";
 
@@ -33,12 +34,14 @@ export default function MeInner() {
     toggleTodo,
     editTodo,
     deleteTodo,
+    addCustomTodo,
     deleteNote,
   } = useStore();
   const [tab, setTab] = useState<Tab>(asTab(params.get("tab")));
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
-  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [composer, setComposer] = useState(false);
+  const [custom, setCustom] = useState("");
   const { done, total } = progressOf(todos);
   const sorted = useMemo(() => [...todos].sort((a, b) => b.addedAt - a.addedAt), [todos]);
   const readList = articles.filter((a) => readIds.includes(a.id));
@@ -47,10 +50,6 @@ export default function MeInner() {
   useEffect(() => {
     setTab(asTab(params.get("tab")));
   }, [params]);
-
-  useEffect(() => {
-    if (hydrated && !loggedIn) router.replace("/login");
-  }, [hydrated, loggedIn, router]);
 
   const go = (next: Tab) => {
     setTab(next);
@@ -65,8 +64,14 @@ export default function MeInner() {
     editTodo(id, draft);
     setEditing(null);
   };
+  const commitCustom = () => {
+    if (addCustomTodo(custom)) {
+      setCustom("");
+      setComposer(false);
+    }
+  };
 
-  if (!loggedIn) return null;
+  if (!hydrated) return null;
 
   return (
     <SiteShell>
@@ -75,13 +80,19 @@ export default function MeInner() {
           <div className="me-head">
             <div>
               <h1>
-                {role} {name}님
+                {loggedIn ? `${role} ${name}님` : "나의 투두"}
               </h1>
-              <div className="sub">{email}</div>
-              <div className="sub" style={{ marginTop: 8 }}>
-                <i className="dot" />
-                이메일 로그인 중
-              </div>
+              {loggedIn ? (
+                <>
+                  <div className="sub">{email}</div>
+                  <div className="sub" style={{ marginTop: 8 }}>
+                    <i className="dot" />
+                    이메일 로그인 중
+                  </div>
+                </>
+              ) : (
+                <div className="sub">이 브라우저에만 저장됩니다. 다른 사람과 목록이 섞이지 않아요.</div>
+              )}
             </div>
             <div className="stats">
               <button className={`stat${tab === "read" ? " on" : ""}`} type="button" onClick={() => go("read")}>
@@ -127,7 +138,7 @@ export default function MeInner() {
                         <input
                           value={draft}
                           autoFocus
-                          maxLength={50}
+                          maxLength={TODO_MAX}
                           onChange={(e) => setDraft(e.target.value)}
                           onBlur={() => commit(t.id)}
                           onKeyDown={(e) => {
@@ -144,10 +155,21 @@ export default function MeInner() {
                         </div>
                       )}
                       <div className="meta">
-                        원문: {t.sourceTitle} · {formatDotDate(t.addedAt)}
+                        {t.sourceArticleId ? (
+                          <>
+                            원문:{" "}
+                            <Link href={`/articles/${t.sourceArticleId}`}>{t.sourceTitle}</Link>
+                            {" · "}
+                            {formatDotDate(t.addedAt)}
+                          </>
+                        ) : (
+                          <>
+                            원문: {t.sourceTitle} · {formatDotDate(t.addedAt)}
+                          </>
+                        )}
                       </div>
                     </div>
-                    <button className="ghost muted-x" type="button" aria-label="삭제" onClick={() => setConfirmId(t.id)}>
+                    <button className="ghost muted-x" type="button" aria-label="삭제" onClick={() => deleteTodo(t.id)}>
                       <IconClose />
                     </button>
                   </div>
@@ -209,24 +231,39 @@ export default function MeInner() {
           ) : null}
         </div>
       </div>
-      {confirmId ? (
-        <div className="dim">
+      {tab === "todos" ? (
+        <button
+          className="me-fab"
+          type="button"
+          aria-label="투두 직접 추가"
+          onClick={() => setComposer(true)}
+        >
+          +
+        </button>
+      ) : null}
+      {composer ? (
+        <div className="dim" onClick={(e) => e.target === e.currentTarget && setComposer(false)}>
           <div className="modal">
-            <h2>이 투두를 삭제할까요?</h2>
-            <p>삭제하면 나의 투두 목록에서 사라집니다.</p>
+            <h2>투두 직접 추가</h2>
+            <p>아티클에서 담지 않은 실행 항목을 이 브라우저의 나의 투두에 넣습니다.</p>
+            <input
+              value={custom}
+              autoFocus
+              maxLength={TODO_MAX}
+              placeholder="이번 주 안에 할 일"
+              onChange={(e) => setCustom(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitCustom();
+                if (e.key === "Escape") setComposer(false);
+              }}
+            />
+            <div className="hint">{custom.length}/{TODO_MAX}자</div>
             <div className="row">
-              <button className="btn" type="button" onClick={() => setConfirmId(null)}>
+              <button className="btn" type="button" onClick={() => setComposer(false)}>
                 취소
               </button>
-              <button
-                className="btn primary"
-                type="button"
-                onClick={() => {
-                  deleteTodo(confirmId);
-                  setConfirmId(null);
-                }}
-              >
-                삭제
+              <button className="btn primary" type="button" onClick={commitCustom}>
+                추가
               </button>
             </div>
           </div>

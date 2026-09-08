@@ -1,24 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { MouseEvent } from "react";
 import { IconBookmark } from "./icons";
+import { formatDotDate } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import type { Article } from "@/lib/types";
 
 export function ArticleCard({ article, staticPreview }: { article: Article; staticPreview?: boolean }) {
-  const router = useRouter();
-  const { loggedIn, toggleSave, isSaved, showToast } = useStore();
+  const { toggleSave, isSaved, showToast } = useStore();
   const saved = isSaved(article.id);
 
   const onBookmark = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!loggedIn) {
-      router.push("/login");
-      return;
-    }
     toggleSave(article.id);
     showToast(saved ? "저장을 해제했습니다" : "콘텐츠를 저장했습니다");
   };
@@ -34,44 +29,50 @@ export function ArticleCard({ article, staticPreview }: { article: Article; stat
     </button>
   );
 
+  const visitDate = formatDotDate(Date.now());
+
   if (article.cover && !staticPreview) {
     return (
       <div className="card cover-card">
-        <Link href={`/articles/${article.id}`}>
+        <Link href={`/articles/${article.id}`} aria-label={article.title}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={article.cover} alt={article.title} />
         </Link>
+        <span className="cover-date">{visitDate}</span>
         {saveBtn}
       </div>
     );
   }
 
-  const inner = (
-    <>
-      <div
-        className={`thumb ${article.cardTone}${article.thumbnail ? " has-img" : ""}`}
-        style={article.thumbnail ? { backgroundImage: `url(${article.thumbnail})` } : undefined}
-      >
-        <span className="tag">TREND</span>
+  const face = (
+    <div className={`editorial-face ${article.cardTone}`}>
+      <span className="tag">TREND</span>
+      <div className="editorial-copy">
         <div className="eyebrow">{article.cardEyebrow}</div>
         <div className="line">{article.cardLine}</div>
       </div>
-      <div className="card-body">
+      <div className="editorial-foot">
         <p>{article.dek}</p>
         <div className="card-meta">
           {article.label ? <span className="badge">{article.label}</span> : null}
-          <span>{article.date}</span>
-          <span className="meta-spacer" aria-hidden />
+          <span>{visitDate}</span>
         </div>
       </div>
-    </>
+    </div>
   );
 
-  if (staticPreview) return <div className="card">{inner}</div>;
+  if (staticPreview) {
+    return (
+      <div className="card editorial-card static">
+        {face}
+      </div>
+    );
+  }
+
   return (
-    <div className="card">
+    <div className="card editorial-card">
       <Link href={`/articles/${article.id}`} className="card-hit">
-        {inner}
+        {face}
       </Link>
       {saveBtn}
     </div>

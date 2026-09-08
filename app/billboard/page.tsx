@@ -9,7 +9,7 @@ export default function BillboardPage() {
     <SiteShell>
       <div className="catalog">
         <div className="wrap">
-          <p className="kicker">GNB</p>
+          <p className="kicker">캐릿</p>
           <h1>마이크로 트렌드 전광판</h1>
           <p className="lede">커뮤니티에서 2~6주 반짝하는 신호를 순위대로 보여 줍니다. 키워드를 누르면 관련 글입니다.</p>
           <div className="board">

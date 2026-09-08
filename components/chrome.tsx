@@ -8,10 +8,10 @@ import { progressOf, useStore } from "@/lib/store";
 import { IconProfile, IconSearch } from "./icons";
 
 export function TopBar() {
-  const { loggedIn, todos } = useStore();
+  const { todos, hydrated } = useStore();
   const router = useRouter();
   const { done, total, pct } = progressOf(todos);
-  const idle = total === 0 || pct === 0;
+  const idle = !hydrated || total === 0 || pct === 0;
 
   return (
     <header className="topbar">
@@ -22,28 +22,18 @@ export function TopBar() {
           </Link>
         ))}
       </nav>
-      {loggedIn ? (
-        <div className="gauge-wrap">
-          <span className="label">
-            나의 투두{" "}
-            <b className="frac">
-              {done}/{total}
-            </b>
-          </span>
-          <div className={`track${idle ? " idle" : ""}`} title={`${pct}%`}>
-            <i style={{ width: `${pct}%` }} />
-          </div>
-          <button className="gauge-go" type="button" aria-label="나의 투두" onClick={() => router.push("/me")}>
-            ›
-          </button>
+      <button className="gauge-wrap" type="button" onClick={() => router.push("/me")}>
+        <span className="label">
+          나의 투두{" "}
+          <b className="frac">{hydrated ? `${done}/${total}` : ""}</b>
+        </span>
+        <div className={`track${idle ? " idle" : ""}`} title={`${pct}%`}>
+          <i style={{ width: `${pct}%` }} />
         </div>
-      ) : (
-        <div className="gauge-wrap">
-          <button className="btn ghost login-mini" type="button" onClick={() => router.push("/login")}>
-            로그인
-          </button>
-        </div>
-      )}
+        <span className="gauge-go" aria-hidden>
+          ›
+        </span>
+      </button>
     </header>
   );
 }
@@ -121,54 +111,71 @@ function SubNavInner({ onHero = false }: { onHero?: boolean }) {
       </Link>
       <div className="sub-right">
         <form className="search" onSubmit={onSearch}>
+          <button type="submit" className="ghost" aria-label="검색 실행">
+            <IconSearch />
+          </button>
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="검색어를 입력해 보세요"
             aria-label="검색"
           />
-          <button type="submit" className="ghost" aria-label="검색 실행">
-            <IconSearch />
-          </button>
         </form>
         <div ref={ref} style={{ position: "relative" }}>
           <button
             className="icon-btn"
             type="button"
             aria-label="프로필"
-            onClick={() => {
-              if (!loggedIn) {
-                router.push("/login");
-                return;
-              }
-              setOpen((v) => !v);
-            }}
+            onClick={() => setOpen((v) => !v)}
           >
             <IconProfile />
           </button>
-          {open && loggedIn ? (
+          {open ? (
             <div className="profile-pop">
-              {MENU_ITEMS.map((item) => (
-                <Link key={item.id} href={item.href} onClick={() => setOpen(false)}>
-                  {item.label}
-                </Link>
-              ))}
+              {loggedIn ? (
+                MENU_ITEMS.map((item) => (
+                  <Link key={item.id} href={item.href} onClick={() => setOpen(false)}>
+                    {item.label}
+                  </Link>
+                ))
+              ) : (
+                <>
+                  <Link href="/me" onClick={() => setOpen(false)}>
+                    나의 투두
+                  </Link>
+                  <Link href="/me?tab=saved" onClick={() => setOpen(false)}>
+                    저장한 콘텐츠
+                  </Link>
+                  <Link href="/me?tab=read" onClick={() => setOpen(false)}>
+                    읽은 콘텐츠
+                  </Link>
+                  <Link href="/me?tab=notes" onClick={() => setOpen(false)}>
+                    밑줄 노트
+                  </Link>
+                </>
+              )}
               {isEditor ? (
                 <Link href="/admin/write" onClick={() => setOpen(false)}>
                   아티클 작성
                 </Link>
               ) : null}
               <div className="sep" />
-              <button
-                type="button"
-                onClick={() => {
-                  logout();
-                  setOpen(false);
-                  router.push("/login");
-                }}
-              >
-                로그아웃
-              </button>
+              {loggedIn ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    setOpen(false);
+                    router.push("/");
+                  }}
+                >
+                  로그아웃
+                </button>
+              ) : (
+                <Link href="/login" onClick={() => setOpen(false)}>
+                  로그인
+                </Link>
+              )}
             </div>
           ) : null}
         </div>
@@ -202,11 +209,6 @@ function SubNavInner({ onHero = false }: { onHero?: boolean }) {
                 className="btn primary"
                 type="button"
                 onClick={() => {
-                  if (!loggedIn) {
-                    setLetterOpen(false);
-                    router.push("/login");
-                    return;
-                  }
                   subscribeLetter(letterEmail);
                   setLetterOpen(false);
                 }}
