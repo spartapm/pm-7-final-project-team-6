@@ -286,8 +286,8 @@ button { cursor: pointer; }
 .pink-photo.hero-banner {
   width: 380px;
   height: auto;
-  aspect-ratio: 380 / 362;
-  object-fit: cover;
+  aspect-ratio: 1024 / 967;
+  object-fit: contain;
   background: #111;
 }
 .hero-side {
