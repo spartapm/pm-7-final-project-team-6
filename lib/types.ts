@@ -36,6 +36,8 @@ export type Article = {
   cardTone: CardTone;
   cardEyebrow: string;
   cardLine: string;
+  cardHeadline?: string;
+  cardSub?: string;
   heroQuote: string;
   lead: string;
   sections: ArticleSection[];

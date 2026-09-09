@@ -132,27 +132,16 @@ function SubNavInner({ onHero = false }: { onHero?: boolean }) {
           </button>
           {open ? (
             <div className="profile-pop">
-              {loggedIn ? (
-                MENU_ITEMS.map((item) => (
+              {MENU_ITEMS.map((item) =>
+                !loggedIn && item.id === "edit" ? (
+                  <span key={item.id} className="locked">
+                    {item.label}
+                  </span>
+                ) : (
                   <Link key={item.id} href={item.href} onClick={() => setOpen(false)}>
                     {item.label}
                   </Link>
-                ))
-              ) : (
-                <>
-                  <Link href="/me" onClick={() => setOpen(false)}>
-                    나의 투두
-                  </Link>
-                  <Link href="/me?tab=saved" onClick={() => setOpen(false)}>
-                    저장한 콘텐츠
-                  </Link>
-                  <Link href="/me?tab=read" onClick={() => setOpen(false)}>
-                    읽은 콘텐츠
-                  </Link>
-                  <Link href="/me?tab=notes" onClick={() => setOpen(false)}>
-                    밑줄 노트
-                  </Link>
-                </>
+                ),
               )}
               {isEditor ? (
                 <Link href="/admin/write" onClick={() => setOpen(false)}>

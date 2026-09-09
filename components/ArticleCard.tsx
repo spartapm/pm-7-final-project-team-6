@@ -10,6 +10,9 @@ import type { Article } from "@/lib/types";
 export function ArticleCard({ article, staticPreview }: { article: Article; staticPreview?: boolean }) {
   const { toggleSave, isSaved, showToast } = useStore();
   const saved = isSaved(article.id);
+  const visitDate = formatDotDate(Date.now());
+  const headline = article.cardHeadline || article.title;
+  const sub = article.cardSub || article.dek;
 
   const onBookmark = (e: MouseEvent) => {
     e.preventDefault();
@@ -29,16 +32,21 @@ export function ArticleCard({ article, staticPreview }: { article: Article; stat
     </button>
   );
 
-  const visitDate = formatDotDate(Date.now());
-
   if (article.cover && !staticPreview) {
     return (
       <div className="card cover-card">
         <Link href={`/articles/${article.id}`} aria-label={article.title}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={article.cover} alt={article.title} />
+          <div className="cover-copy">
+            <strong>{headline}</strong>
+            <p>{sub}</p>
+            <div className="card-meta">
+              {article.label ? <span className="badge">{article.label}</span> : null}
+              <span>{visitDate}</span>
+            </div>
+          </div>
         </Link>
-        <span className="cover-date">{visitDate}</span>
         {saveBtn}
       </div>
     );

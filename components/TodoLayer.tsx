@@ -81,7 +81,7 @@ export function TodoLayer({
   };
 
   return (
-    <>
+    <div className="article-tools">
       <div className="rail">
         <button className="rail-btn" type="button" aria-label="맨 위로" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
           <IconTop />
@@ -107,7 +107,7 @@ export function TodoLayer({
         </button>
         {hasTodos ? (
           <button
-            className={`todo-fab${open ? " open" : ""}`}
+            className={`rail-btn todo-fab${open ? " open" : ""}`}
             type="button"
             aria-label="투두 리스트"
             onClick={() => {
@@ -153,8 +153,7 @@ export function TodoLayer({
             노트에 담기
           </button>
         </aside>
-      ) : null}
-      {open && hasTodos ? (
+      ) : open && hasTodos ? (
         <aside className="panel">
           <div className="panel-h">
             <span>업무에 적용해볼 만한 투두 리스트</span>
@@ -214,7 +213,9 @@ export function TodoLayer({
             나의 투두로 가기
           </button>
         </aside>
-      ) : null}
-    </>
+      ) : (
+        <div className="panel-slot" aria-hidden />
+      )}
+    </div>
   );
 }

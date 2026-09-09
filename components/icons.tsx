@@ -31,7 +31,7 @@ export function IconBookmark({ filled = false }: { filled?: boolean }) {
 
 export function IconList() {
   return (
-    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden>
+    <svg width="18" height="18" viewBox="0 0 22 22" fill="none" aria-hidden>
       <rect x="3.5" y="4" width="15" height="14" rx="2" stroke="currentColor" strokeWidth="1.6" />
       <path d="M7 8.5h8M7 11.5h8M7 14.5h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>

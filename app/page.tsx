@@ -32,7 +32,7 @@ function HomeInner() {
           </div>
           <div className="hero-visual">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="pink-photo" src="/hero-pink.png" alt="PINK VIBES ONLY" />
+            <img className="pink-photo hero-banner" src="/figma/hero-banner.png" alt="콘텐츠를 실행에 옮겨, 월급 인상까지" />
           </div>
           {featured ? (
             <Link className="hero-side" href={`/articles/${featured.id}`}>
