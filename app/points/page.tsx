@@ -1,19 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { SiteShell } from "@/components/chrome";
 import { useStore } from "@/lib/store";
 
 export default function PointsPage() {
-  const router = useRouter();
-  const { hydrated, loggedIn, prefs, claimDailyPoints, showToast } = useStore();
+  const { hydrated, prefs, claimDailyPoints, showToast } = useStore();
 
-  useEffect(() => {
-    if (hydrated && !loggedIn) router.replace("/login");
-  }, [hydrated, loggedIn, router]);
-
-  if (!loggedIn) return null;
+  if (!hydrated) return null;
 
   const today = new Date().toISOString().slice(0, 10);
   const claimed = prefs.lastPointClaim === today;

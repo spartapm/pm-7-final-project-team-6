@@ -1,19 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { SiteShell } from "@/components/chrome";
 import { useStore } from "@/lib/store";
 
 export default function MembershipPage() {
-  const router = useRouter();
-  const { hydrated, loggedIn, prefs, name, upgradePlan, showToast } = useStore();
+  const { hydrated, prefs, name, upgradePlan, showToast } = useStore();
 
-  useEffect(() => {
-    if (hydrated && !loggedIn) router.replace("/login");
-  }, [hydrated, loggedIn, router]);
-
-  if (!loggedIn) return null;
+  if (!hydrated) return null;
 
   const plus = prefs.plan === "plus";
 

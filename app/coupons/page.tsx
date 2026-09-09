@@ -1,21 +1,15 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, useState } from "react";
 import { SiteShell } from "@/components/chrome";
 import { COUPON_CATALOG } from "@/lib/data";
 import { useStore } from "@/lib/store";
 
 export default function CouponsPage() {
-  const router = useRouter();
-  const { hydrated, loggedIn, prefs, redeemCoupon, showToast } = useStore();
+  const { hydrated, prefs, redeemCoupon, showToast } = useStore();
   const [code, setCode] = useState("");
 
-  useEffect(() => {
-    if (hydrated && !loggedIn) router.replace("/login");
-  }, [hydrated, loggedIn, router]);
-
-  if (!loggedIn) return null;
+  if (!hydrated) return null;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
