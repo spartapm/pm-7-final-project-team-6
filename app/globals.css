@@ -805,22 +805,6 @@ button { cursor: pointer; }
   flex: none;
 }
 .todo-fab.open, .todo-fab:hover { background: var(--lime); color: #111; }
-.todo-fab .count {
-  position: absolute;
-  top: auto;
-  bottom: -4px;
-  right: -4px;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 5px;
-  border-radius: 99px;
-  background: #ff3b5c;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 800;
-  display: grid;
-  place-items: center;
-}
 .panel {
   position: sticky;
   top: 140px;

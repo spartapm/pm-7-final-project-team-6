@@ -7,6 +7,7 @@ import { ArticleBody, extractToc } from "@/components/ArticleBody";
 import { SiteShell } from "@/components/chrome";
 import { TodoLayer } from "@/components/TodoLayer";
 import { getArticleManuscript } from "@/lib/bodies";
+import { formatDotDate } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import type { ArticleVisual } from "@/lib/types";
 
@@ -65,7 +66,7 @@ export default function ArticlePage() {
               <>
                 <h1>{article.titleBreak}</h1>
                 <p className="byline">
-                  {article.date} · {article.author}
+                  {formatDotDate(Date.now())} · {article.author}
                 </p>
               </>
             )}

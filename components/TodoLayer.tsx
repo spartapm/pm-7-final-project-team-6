@@ -21,7 +21,6 @@ export function TodoLayer({
     addTodoFromArticle,
     removeTodoFromArticle,
     isArticleTodoSaved,
-    todos,
     toggleSave,
     isSaved,
     addNote,
@@ -35,7 +34,6 @@ export function TodoLayer({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState("");
   const hasTodos = article.todos.length > 0;
-  const mine = todos.length;
   const saved = isSaved(article.id);
 
   const textOf = (todo: { id: string; text: string }) => edits[todo.id] ?? todo.text;
@@ -116,7 +114,6 @@ export function TodoLayer({
             }}
           >
             <IconList />
-            {!open && mine > 0 ? <span className="count">{mine}</span> : null}
           </button>
         ) : null}
         <button className="rail-btn" type="button" aria-label="형광펜" onClick={onHighlight}>

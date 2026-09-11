@@ -43,7 +43,7 @@ export function ArticleCard({ article, staticPreview }: { article: Article; stat
           <p>{sub}</p>
           <div className="card-meta">
             {article.label ? <span className="badge">{article.label}</span> : null}
-            <span>{article.date}</span>
+            <span>{visitDate}</span>
           </div>
         </div>
       </>

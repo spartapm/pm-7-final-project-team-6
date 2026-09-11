@@ -33,9 +33,14 @@ function resolveImage(name: string, images: Record<string, string>) {
 }
 
 export function extractToc(markdown: string) {
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n").map((l) => l.trim());
   const items: { id: string; heading: string }[] = [];
-  for (const raw of markdown.replace(/\r\n/g, "\n").split("\n")) {
-    const line = raw.trim();
+  const neighbor = (from: number, dir: 1 | -1) => {
+    for (let j = from + dir; j >= 0 && j < lines.length; j += dir) if (lines[j]) return lines[j];
+    return "";
+  };
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
     const h2 = line.match(H2);
     if (h2) {
       items.push({ id: `s${items.length + 1}`, heading: stripMd(h2[1]) });
@@ -47,7 +52,13 @@ export function extractToc(markdown: string) {
       continue;
     }
     const num = line.match(SECTION_NUM);
-    if (num && !OL_SHORT.test(line) && num[1].length > 12) {
+    if (!num) continue;
+    const prev = neighbor(i, -1);
+    const nxt = neighbor(i, 1);
+    const inShortList =
+      OL_SHORT.test(line) &&
+      ((SECTION_NUM.test(nxt) && OL_SHORT.test(nxt)) || (SECTION_NUM.test(prev) && OL_SHORT.test(prev)));
+    if (!inShortList) {
       items.push({ id: `s${items.length + 1}`, heading: stripMd(num[0]) });
     }
   }
