@@ -13,6 +13,7 @@ export function ArticleCard({ article, staticPreview }: { article: Article; stat
   const visitDate = formatDotDate(Date.now());
   const headline = article.cardHeadline || article.title;
   const sub = article.cardSub || article.dek;
+  const isThumb = Boolean(article.thumbCard && article.cover);
 
   const onBookmark = (e: MouseEvent) => {
     e.preventDefault();
@@ -23,7 +24,7 @@ export function ArticleCard({ article, staticPreview }: { article: Article; stat
 
   const saveBtn = staticPreview ? null : (
     <button
-      className={`card-save${article.cover ? " on-cover" : ""}${saved ? " on" : ""}`}
+      className={`card-save${isThumb ? " on-thumb" : article.cover ? " on-cover" : ""}${saved ? " on" : ""}`}
       type="button"
       aria-label={saved ? "저장 해제" : "콘텐츠 저장"}
       onClick={onBookmark}
@@ -31,6 +32,34 @@ export function ArticleCard({ article, staticPreview }: { article: Article; stat
       <IconBookmark filled={saved} />
     </button>
   );
+
+  if (isThumb) {
+    const face = (
+      <>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={article.cover} alt={article.title} />
+        <div className="thumb-copy">
+          <strong>{headline}</strong>
+          <p>{sub}</p>
+          <div className="card-meta">
+            {article.label ? <span className="badge">{article.label}</span> : null}
+            <span>{article.date}</span>
+          </div>
+        </div>
+      </>
+    );
+    if (staticPreview) {
+      return <div className="card thumb-card static">{face}</div>;
+    }
+    return (
+      <div className="card thumb-card">
+        <Link href={`/articles/${article.id}`} aria-label={article.title}>
+          {face}
+        </Link>
+        {saveBtn}
+      </div>
+    );
+  }
 
   if (article.cover && !staticPreview) {
     return (

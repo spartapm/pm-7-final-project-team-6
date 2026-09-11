@@ -46,6 +46,7 @@ export type Article = {
   thumbnail?: string;
   cover?: string;
   bodyImages?: string[];
+  thumbCard?: boolean;
 };
 
 export type UserTodo = {
