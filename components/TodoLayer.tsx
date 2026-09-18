@@ -27,6 +27,7 @@ export function TodoLayer({
     showToast,
   } = useStore();
   const [open, setOpen] = useState(false);
+  const [seen, setSeen] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
   const [composer, setComposer] = useState(false);
   const [draft, setDraft] = useState("");
@@ -105,15 +106,19 @@ export function TodoLayer({
         </button>
         {hasTodos ? (
           <button
-            className={`rail-btn todo-fab${open ? " open" : ""}`}
+            className={`rail-btn todo-fab${open ? " open" : ""}${seen && !open ? " seen" : ""}`}
             type="button"
-            aria-label="투두 리스트"
+            aria-label="일잘 TIP"
             onClick={() => {
               setComposer(false);
-              setOpen((v) => !v);
+              setOpen((v) => {
+                if (!v) setSeen(true);
+                return !v;
+              });
             }}
           >
             <IconList />
+            <span className="new-badge">NEW</span>
           </button>
         ) : null}
         <button className="rail-btn" type="button" aria-label="형광펜" onClick={onHighlight}>
@@ -153,7 +158,7 @@ export function TodoLayer({
       ) : open && hasTodos ? (
         <aside className="panel">
           <div className="panel-h">
-            <span>업무에 적용해볼 만한 투두 리스트</span>
+            <span>업무에 적용해 볼 만한 일잘TIP을 담아보세요!</span>
             <button type="button" onClick={() => setOpen(false)} aria-label="닫기">
               ×
             </button>
@@ -163,7 +168,7 @@ export function TodoLayer({
               const already = isArticleTodoSaved(t.id, textOf(t));
               return (
                 <div key={t.id} className={`todo-row${already ? " saved" : ""}`}>
-                  {flash === t.id ? <span className="save-pop">저장 완료!</span> : null}
+                  {flash === t.id ? <span className="save-pop">담기 완료!</span> : null}
                   <button className="check" type="button" onClick={() => save(t)} aria-label={already ? "담기 해제" : "담기"}>
                     {already ? <IconCheck /> : null}
                   </button>
@@ -207,7 +212,7 @@ export function TodoLayer({
             type="button"
             onClick={() => router.push("/me")}
           >
-            나의 투두로 가기
+            나의 일잘TIP.zip 바로 가기
           </button>
         </aside>
       ) : (

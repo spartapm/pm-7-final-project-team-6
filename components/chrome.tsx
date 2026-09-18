@@ -24,7 +24,7 @@ export function TopBar() {
       </nav>
       <button className="gauge-wrap" type="button" onClick={() => router.push("/me")}>
         <span className="label">
-          나의 투두{" "}
+          일잘 TIP.zip{" "}
           <b className="frac">{hydrated ? `${done}/${total}` : ""}</b>
         </span>
         <div className={`track${idle ? " idle" : ""}`} title={`${pct}%`}>
@@ -178,7 +178,7 @@ function SubNavInner({ onHero = false }: { onHero?: boolean }) {
         >
           <div className="modal letter-modal" onClick={(e) => e.stopPropagation()}>
             <h2>트렌드 레터</h2>
-            <p>매주 마이크로 트렌드와 실행 투두를 메일로 받습니다. 첫 구독 시 50P가 적립됩니다.</p>
+            <p>매주 마이크로 트렌드와 실행 일잘TIP을 메일로 받습니다. 첫 구독 시 50P가 적립됩니다.</p>
             <label className="letter-label">
               수신 이메일
               <input
@@ -246,7 +246,7 @@ export function Footer() {
         <strong>Careet</strong>
         트렌드를 읽으세요. 새로움을 만드세요.
         <br />
-        캐릿 · 아티클에서 투두까지
+        캐릿 · 아티클에서 일잘TIP까지
       </div>
     </footer>
   );

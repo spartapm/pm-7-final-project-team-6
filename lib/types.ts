@@ -56,7 +56,38 @@ export type UserTodo = {
   sourceTitle: string;
   addedAt: number;
   done: boolean;
+  folderId?: string;
+  memo?: string;
+  sourceFolderName?: string;
 };
+
+export type ZipFolder = {
+  id: string;
+  name: string;
+  collapsed: boolean;
+};
+
+export type ZipState = {
+  folders: ZipFolder[];
+  onboardingDone: boolean;
+};
+
+export const defaultZip = (): ZipState => ({
+  folders: [],
+  onboardingDone: false,
+});
+
+export function mergeZip(input?: Partial<ZipState> | null): ZipState {
+  const base = defaultZip();
+  return {
+    folders: Array.isArray(input?.folders) ? input.folders.map((f) => ({
+      id: f.id,
+      name: f.name,
+      collapsed: Boolean(f.collapsed),
+    })) : base.folders,
+    onboardingDone: Boolean(input?.onboardingDone),
+  };
+}
 
 export type Draft = {
   id: string;
@@ -93,6 +124,7 @@ export type Prefs = {
   points: number;
   lastPointClaim: string;
   coupons: Coupon[];
+  zip: ZipState;
 };
 
 export const defaultPrefs = (): Prefs => ({
@@ -104,10 +136,14 @@ export const defaultPrefs = (): Prefs => ({
   points: 0,
   lastPointClaim: "",
   coupons: [],
+  zip: defaultZip(),
 });
 
 export function mergePrefs(input?: Partial<Prefs> | null): Prefs {
-  return { ...defaultPrefs(), ...(input ?? {}) };
+  const next = { ...defaultPrefs(), ...(input ?? {}) };
+  next.zip = mergeZip(input?.zip ?? next.zip);
+  next.coupons = Array.isArray(next.coupons) ? next.coupons : [];
+  return next;
 }
 
 export type AppState = {

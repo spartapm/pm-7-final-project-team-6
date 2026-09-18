@@ -1,0 +1,625 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { IconCheck, IconClose, IconDots, IconEdit, IconGrip, IconHelp, IconMemo } from "./icons";
+import { formatDotDate } from "@/lib/format";
+import { useStore } from "@/lib/store";
+import type { UserTodo, ZipFolder } from "@/lib/types";
+import { DONE_ID, FOLDER_SUGGESTIONS, UNSORTED_ID, folderTitle, tipsIn } from "@/lib/zip";
+
+const ONBOARD = [
+  {
+    spot: "done",
+    title: "완료된 TIP이 모이는 곳",
+    body: "완료한 TIP은 이 폴더에 자동으로 모여요. 맨 위에 고정되어 있어 확인에 편해요!",
+  },
+  {
+    spot: "unsorted",
+    title: "아직 분류 안 된 TIP",
+    body: "아티클에서 바로 담은 TIP은 여기부터 시작돼요. 원하는 폴더로 옮겨보세요.",
+  },
+  {
+    spot: "check",
+    title: "완료하면 자동으로 이동해요",
+    body: "체크하면 완료 폴더로 자동 이동해요. 다시 누르면 원래 있던 폴더로 돌아가요.",
+  },
+  {
+    spot: "add",
+    title: "폴더 이름 추천도 해줘요",
+    body: "클릭하면 업무에 맞는 폴더 이름을 추천해드려요.",
+  },
+  {
+    spot: "drag",
+    title: "드래그해서 폴더 순서를 바꿀 수 있어요",
+    body: "손잡이를 잡고 폴더 순서를 바꾸고, ⋯ 메뉴로 TIP을 다른 폴더로 옮기거나 메모를 남길 수 있어요.",
+  },
+] as const;
+
+export function TipZip() {
+  const {
+    todos,
+    prefs,
+    toggleTodo,
+    deleteTodo,
+    setTipMemo,
+    moveTip,
+    addZipFolder,
+    renameZipFolder,
+    deleteZipFolder,
+    toggleZipFolder,
+    reorderZipFolders,
+    setOnboardingDone,
+  } = useStore();
+  const folders = prefs.zip.folders;
+  const [tour, setTour] = useState<number | null>(prefs.zip.onboardingDone ? null : 0);
+  const [composer, setComposer] = useState(false);
+  const [name, setName] = useState("");
+  const [flash, setFlash] = useState<string | null>(null);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+
+  const allEmpty = todos.length === 0;
+  const customIds = folders.map((f) => f.id);
+
+  const pulse = (id: string) => {
+    setFlash(id);
+    window.setTimeout(() => setFlash(null), 900);
+  };
+
+  const submitFolder = (raw: string) => {
+    const res = addZipFolder(raw);
+    if (!res.id) return;
+    setComposer(false);
+    setName("");
+    pulse(res.id);
+    if (!res.created) {
+      // existing folder highlighted
+    }
+  };
+
+  return (
+    <div className="zip-board">
+      <div className="zip-title-row" data-zip-spot="title">
+        <div className="zip-layers" aria-hidden>
+          <i />
+          <b />
+        </div>
+        <h2>
+          일잘 TIP<span className="zip-badge">.ZIP</span>
+        </h2>
+      </div>
+
+      {allEmpty ? (
+        <div className="zip-empty">
+          <p>아직 담은 일잘TIP이 없어요 🥲 캐릿이 추천해주는 업무 적용 꿀팁을 담아보세요</p>
+          <Link href="/">트렌드 꿀팁 보러 가기</Link>
+        </div>
+      ) : null}
+
+      <div className="zip-folders">
+          <ZipFolderCard
+            id={DONE_ID}
+            title={folderTitle(DONE_ID, folders)}
+            todos={tipsIn(todos, DONE_ID)}
+            folders={folders}
+            fixed
+            flash={flash === DONE_ID}
+            spot="done"
+            openMenu={openMenu}
+            setOpenMenu={setOpenMenu}
+            onToggleTip={toggleTodo}
+            onMemo={setTipMemo}
+            onMove={moveTip}
+            onDeleteTip={deleteTodo}
+          />
+          <ZipFolderCard
+            id={UNSORTED_ID}
+            title={folderTitle(UNSORTED_ID, folders)}
+            todos={tipsIn(todos, UNSORTED_ID)}
+            folders={folders}
+            fixed
+            flash={flash === UNSORTED_ID}
+            spot="unsorted"
+            checkSpot
+            openMenu={openMenu}
+            setOpenMenu={setOpenMenu}
+            onToggleTip={toggleTodo}
+            onMemo={setTipMemo}
+            onMove={moveTip}
+            onDeleteTip={deleteTodo}
+            onDropTip={(tipId) => moveTip(tipId, UNSORTED_ID)}
+          />
+          {folders.map((f, i) => (
+            <ZipFolderCard
+              key={f.id}
+              id={f.id}
+              title={f.name}
+              todos={tipsIn(todos, f.id)}
+              folders={folders}
+              collapsed={f.collapsed}
+              flash={flash === f.id}
+              spot={i === 0 ? "drag" : undefined}
+              openMenu={openMenu}
+              setOpenMenu={setOpenMenu}
+              onToggle={() => toggleZipFolder(f.id)}
+              onRename={(next) => {
+                const res = renameZipFolder(f.id, next);
+                pulse(res.id);
+              }}
+              onDelete={() => deleteZipFolder(f.id)}
+              onToggleTip={toggleTodo}
+              onMemo={setTipMemo}
+              onMove={moveTip}
+              onDeleteTip={deleteTodo}
+              onDropFolder={(fromId) => reorderZipFolders(fromId, f.id)}
+              onDropTip={(tipId) => moveTip(tipId, f.id)}
+            />
+          ))}
+        </div>
+
+      <AddFolder
+        open={composer}
+        name={name}
+        folders={folders}
+        onOpen={() => setComposer(true)}
+        onName={setName}
+        onCancel={() => {
+          setComposer(false);
+          setName("");
+        }}
+        onSubmit={submitFolder}
+      />
+
+      {composer ? null : (
+        <button
+          className="zip-help-fab"
+          type="button"
+          aria-label="온보딩 다시 보기"
+          data-zip-spot="help"
+          onClick={() => {
+            setOnboardingDone(false);
+            setTour(0);
+          }}
+        >
+          <IconHelp />
+        </button>
+      )}
+
+      {tour !== null ? (
+        <Onboarding
+          step={tour}
+          hasCustom={customIds.length > 0}
+          onNext={() => {
+            if (tour >= ONBOARD.length - 1) {
+              setOnboardingDone(true);
+              setTour(null);
+              return;
+            }
+            setTour(tour + 1);
+          }}
+          onSkip={() => {
+            setOnboardingDone(true);
+            setTour(null);
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function AddFolder({
+  open,
+  name,
+  folders,
+  onOpen,
+  onName,
+  onCancel,
+  onSubmit,
+}: {
+  open: boolean;
+  name: string;
+  folders: ZipFolder[];
+  onOpen: () => void;
+  onName: (v: string) => void;
+  onCancel: () => void;
+  onSubmit: (name: string) => void;
+}) {
+  const q = name.trim().toLowerCase();
+  const filtered = FOLDER_SUGGESTIONS.filter((s) => !q || s.toLowerCase().includes(q));
+  const exactFolder = folders.find((f) => f.name.trim().toLowerCase() === q);
+  const showCreate = q.length > 0 && !exactFolder && !FOLDER_SUGGESTIONS.some((s) => s.toLowerCase() === q);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onCancel]);
+
+  if (!open) {
+    return (
+      <button className="zip-add" type="button" data-zip-spot="add" onClick={onOpen}>
+        + 새 폴더 추가
+      </button>
+    );
+  }
+
+  return (
+    <div className="zip-composer" data-zip-spot="add">
+      <input
+        autoFocus
+        value={name}
+        placeholder="폴더 이름을 입력하세요"
+        onChange={(e) => onName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") onSubmit(name);
+        }}
+      />
+      <div className="zip-suggest">
+        <button type="button" className="direct" onClick={() => name.trim() && onSubmit(name)}>
+          직접 입력하기
+        </button>
+        {filtered.map((s) => (
+          <button key={s} type="button" onClick={() => onSubmit(s)}>
+            <span>추천</span>
+            {s}
+          </button>
+        ))}
+        {showCreate ? (
+          <button type="button" onClick={() => onSubmit(name)}>
+            + “{name.trim()}” 폴더 만들기
+          </button>
+        ) : null}
+      </div>
+      <div className="zip-composer-actions">
+        <button className="btn ghost" type="button" onClick={onCancel}>
+          취소
+        </button>
+        <button className="btn primary" type="button" onClick={() => onSubmit(name)}>
+          추가
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ZipFolderCard({
+  id,
+  title,
+  todos,
+  folders,
+  fixed,
+  collapsed,
+  flash,
+  spot,
+  checkSpot,
+  openMenu,
+  setOpenMenu,
+  onToggle,
+  onRename,
+  onDelete,
+  onToggleTip,
+  onMemo,
+  onMove,
+  onDeleteTip,
+  onDropFolder,
+  onDropTip,
+}: {
+  id: string;
+  title: string;
+  todos: UserTodo[];
+  folders: ZipFolder[];
+  fixed?: boolean;
+  collapsed?: boolean;
+  flash?: boolean;
+  spot?: string;
+  checkSpot?: boolean;
+  openMenu: string | null;
+  setOpenMenu: (id: string | null) => void;
+  onToggle?: () => void;
+  onRename?: (name: string) => void;
+  onDelete?: () => void;
+  onToggleTip: (id: string) => void;
+  onMemo: (id: string, memo: string) => void;
+  onMove: (id: string, folderId: string) => void;
+  onDeleteTip: (id: string) => void;
+  onDropFolder?: (fromId: string) => void;
+  onDropTip?: (tipId: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(title);
+  const shut = Boolean(collapsed) && !fixed;
+
+  return (
+    <section
+      className={`zip-folder${fixed ? " fixed" : ""}${flash ? " section-flash" : ""}`}
+      data-zip-spot={spot}
+      onDragOver={(e) => {
+        if (onDropFolder || onDropTip) e.preventDefault();
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        const folderFrom = e.dataTransfer.getData("zip-folder");
+        const tipFrom = e.dataTransfer.getData("zip-tip");
+        if (folderFrom && onDropFolder) onDropFolder(folderFrom);
+        if (tipFrom && onDropTip) onDropTip(tipFrom);
+      }}
+    >
+      <header className="zip-folder-h">
+        {fixed ? null : (
+          <button
+            className="zip-grip"
+            type="button"
+            aria-label="드래그 핸들"
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData("zip-folder", id);
+              e.dataTransfer.effectAllowed = "move";
+            }}
+          >
+            <IconGrip />
+          </button>
+        )}
+        <button className="zip-fold-toggle" type="button" onClick={onToggle} disabled={fixed}>
+          <span className={`chev${shut ? "" : " open"}`}>▾</span>
+          <strong>{title}</strong>
+          <em>{todos.length}</em>
+        </button>
+        {fixed || !onRename ? null : editing ? (
+          <input
+            className="zip-rename"
+            value={draft}
+            autoFocus
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={() => {
+              onRename(draft);
+              setEditing(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                onRename(draft);
+                setEditing(false);
+              }
+              if (e.key === "Escape") setEditing(false);
+            }}
+          />
+        ) : (
+          <button
+            className="ghost"
+            type="button"
+            aria-label="폴더 이름 수정"
+            onClick={() => {
+              setDraft(title);
+              setEditing(true);
+            }}
+          >
+            <IconEdit />
+          </button>
+        )}
+        {fixed || !onDelete ? null : (
+          <button className="ghost muted-x" type="button" aria-label="폴더 삭제" onClick={onDelete}>
+            <IconClose />
+          </button>
+        )}
+      </header>
+      {shut ? null : (
+        <div className="zip-tips">
+          {todos.length === 0 ? (
+            <div className="zip-folder-empty">{id === UNSORTED_ID ? "아직 담긴 TIP이 없어요" : "이 폴더에 담긴 TIP이 없어요"}</div>
+          ) : (
+            todos.map((t, i) => (
+              <TipCard
+                key={t.id}
+                tip={t}
+                folders={folders}
+                currentId={id}
+                checkSpot={checkSpot && i === 0}
+                menuOpen={openMenu === t.id}
+                onMenu={() => setOpenMenu(openMenu === t.id ? null : t.id)}
+                onCloseMenu={() => setOpenMenu(null)}
+                onToggle={() => onToggleTip(t.id)}
+                onMemo={(memo) => onMemo(t.id, memo)}
+                onMove={(folderId) => {
+                  onMove(t.id, folderId);
+                  setOpenMenu(null);
+                }}
+                onDelete={() => onDeleteTip(t.id)}
+              />
+            ))
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function TipCard({
+  tip,
+  folders,
+  currentId,
+  checkSpot,
+  menuOpen,
+  onMenu,
+  onCloseMenu,
+  onToggle,
+  onMemo,
+  onMove,
+  onDelete,
+}: {
+  tip: UserTodo;
+  folders: ZipFolder[];
+  currentId: string;
+  checkSpot?: boolean;
+  menuOpen: boolean;
+  onMenu: () => void;
+  onCloseMenu: () => void;
+  onToggle: () => void;
+  onMemo: (memo: string) => void;
+  onMove: (folderId: string) => void;
+  onDelete: () => void;
+}) {
+  const [memoOpen, setMemoOpen] = useState(Boolean(tip.memo));
+  const [memo, setMemo] = useState(tip.memo ?? "");
+  const targets = [
+    { id: UNSORTED_ID, name: "미분류 TIP" },
+    ...folders.map((f) => ({ id: f.id, name: f.name })),
+  ].filter((f) => f.id !== currentId && f.id !== DONE_ID);
+
+  return (
+    <article
+      className={`zip-tip${tip.done ? " done" : ""}`}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData("zip-tip", tip.id);
+        e.dataTransfer.effectAllowed = "move";
+      }}
+    >
+      <button
+        className="check round"
+        type="button"
+        aria-label="완료"
+        data-zip-spot={checkSpot ? "check" : undefined}
+        onClick={onToggle}
+      >
+        {tip.done ? <IconCheck /> : null}
+      </button>
+      <div className="zip-tip-body">
+        <div className="title-row">
+          <div className="title">{tip.text}</div>
+          <button
+            className={`ghost memo-btn${tip.memo ? " has" : ""}`}
+            type="button"
+            aria-label="메모"
+            onClick={() => setMemoOpen((v) => !v)}
+          >
+            <IconMemo filled={Boolean(tip.memo)} />
+          </button>
+          <div className="zip-more">
+            <button className="ghost" type="button" aria-label="이동 메뉴" onClick={onMenu}>
+              <IconDots />
+            </button>
+            {menuOpen ? (
+              <div className="zip-menu">
+                <p>다른 폴더로 이동</p>
+                {targets.map((f) => (
+                  <button key={f.id} type="button" onClick={() => onMove(f.id)}>
+                    {f.name}
+                  </button>
+                ))}
+                <button type="button" className="danger" onClick={onDelete}>
+                  삭제
+                </button>
+                <button type="button" onClick={onCloseMenu}>
+                  닫기
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+        <div className="meta">
+          {tip.sourceArticleId ? (
+            <>
+              원문: <Link href={`/articles/${tip.sourceArticleId}`}>{tip.sourceTitle}</Link>
+            </>
+          ) : (
+            <>원문: {tip.sourceTitle || "직접 추가"}</>
+          )}
+          {" · "}
+          {formatDotDate(tip.addedAt)}
+          {tip.done && tip.sourceFolderName ? <span className="origin-badge">{tip.sourceFolderName}</span> : null}
+        </div>
+        {memoOpen ? (
+          <textarea
+            className="zip-memo"
+            value={memo}
+            placeholder="나만의 메모를 여기에 남겨요..."
+            onChange={(e) => setMemo(e.target.value)}
+            onBlur={() => onMemo(memo)}
+          />
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
+function Onboarding({
+  step,
+  hasCustom,
+  onNext,
+  onSkip,
+}: {
+  step: number;
+  hasCustom: boolean;
+  onNext: () => void;
+  onSkip: () => void;
+}) {
+  const item = ONBOARD[step];
+  const last = step === ONBOARD.length - 1;
+  const [box, setBox] = useState<DOMRect | null>(null);
+
+  useEffect(() => {
+    const spot = item.spot === "drag" && !hasCustom ? "add" : item.spot;
+    const el = document.querySelector(`[data-zip-spot="${spot}"]`) as HTMLElement | null;
+    if (!el) {
+      setBox(null);
+      return;
+    }
+    const update = () => setBox(el.getBoundingClientRect());
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [item.spot, hasCustom, step]);
+
+  const cardStyle = useMemo(() => {
+    if (!box) return { top: "30%", left: "50%", transform: "translateX(-50%)" } as const;
+    const below = box.bottom + 16;
+    const top = below + 180 > window.innerHeight ? Math.max(24, box.top - 180) : below;
+    const left = Math.min(Math.max(24, box.left), window.innerWidth - 360);
+    return { top, left };
+  }, [box]);
+
+  return (
+    <div className="zip-onboard">
+      <svg className="zip-mask" aria-hidden>
+        <defs>
+          <mask id="zip-cut">
+            <rect width="100%" height="100%" fill="white" />
+            {box ? (
+              <rect
+                x={box.left - 8}
+                y={box.top - 8}
+                width={box.width + 16}
+                height={box.height + 16}
+                rx="14"
+                fill="black"
+              />
+            ) : null}
+          </mask>
+        </defs>
+        <rect width="100%" height="100%" fill="rgba(0,0,0,0.55)" mask="url(#zip-cut)" />
+      </svg>
+      <button className="zip-skip" type="button" onClick={onSkip}>
+        건너뛰기
+      </button>
+      <div className="zip-card" style={cardStyle}>
+        <h3>{item.title}</h3>
+        <p>{item.body}</p>
+        <div className="zip-dots">
+          {ONBOARD.map((_, i) => (
+            <i key={i} className={i === step ? "on" : undefined} />
+          ))}
+        </div>
+        <button className="btn primary" type="button" onClick={onNext}>
+          {last ? "시작하기" : "다음 →"}
+        </button>
+      </div>
+    </div>
+  );
+}

@@ -98,6 +98,48 @@ export function IconHighlight() {
   );
 }
 
+export function IconGrip() {
+  return (
+    <svg width="14" height="16" viewBox="0 0 14 16" fill="currentColor" aria-hidden>
+      <circle cx="4" cy="3" r="1.2" />
+      <circle cx="10" cy="3" r="1.2" />
+      <circle cx="4" cy="8" r="1.2" />
+      <circle cx="10" cy="8" r="1.2" />
+      <circle cx="4" cy="13" r="1.2" />
+      <circle cx="10" cy="13" r="1.2" />
+    </svg>
+  );
+}
+
+export function IconMemo({ filled = false }: { filled?: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path d="M3.2 2.8h9.6v10.4H5.6L3.2 10.8V2.8Z" stroke="currentColor" strokeWidth="1.4" fill={filled ? "currentColor" : "none"} />
+      <path d="M5.4 6.2h5.2M5.4 8.6h3.6" stroke={filled ? "#fff" : "currentColor"} strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconDots() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+      <circle cx="8" cy="3.2" r="1.2" />
+      <circle cx="8" cy="8" r="1.2" />
+      <circle cx="8" cy="12.8" r="1.2" />
+    </svg>
+  );
+}
+
+export function IconHelp() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
+      <circle cx="9" cy="9" r="7.2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M6.8 7.1c.3-1.2 1.2-1.9 2.3-1.9 1.3 0 2.2.8 2.2 1.9 0 1.3-1.2 1.6-1.8 2.1-.5.4-.7.8-.7 1.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="9" cy="13.1" r="0.9" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function IconPencil() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>

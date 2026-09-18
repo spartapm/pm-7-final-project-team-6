@@ -39,7 +39,7 @@ export default function LoginPage() {
       <form className="login-card" onSubmit={(e) => submit(e)}>
         <div className="logo">Careet</div>
         <h1>이메일로 로그인</h1>
-        <p>투두 리스트는 로그인 없이 이 브라우저에만 저장됩니다. 아티클 작성이 필요하면 에디터 계정으로 들어가 주세요.</p>
+        <p>일잘TIP은 로그인 없이 이 브라우저에만 저장됩니다. 아티클 작성이 필요하면 에디터 계정으로 들어가 주세요.</p>
         <label>
           이름
           <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />

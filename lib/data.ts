@@ -14,7 +14,7 @@ export const MENU_ITEMS = [
   { id: "points", label: "포인트 받기", href: "/points" },
   { id: "read", label: "읽은 콘텐츠", href: "/me?tab=read" },
   { id: "saved", label: "저장한 콘텐츠", href: "/me?tab=saved" },
-  { id: "todos", label: "나의 투두", href: "/me" },
+  { id: "todos", label: "일잘 TIP.zip", href: "/me" },
   { id: "notes", label: "밑줄 노트", href: "/me?tab=notes" },
   { id: "edit", label: "내 정보 수정", href: "/me/edit" },
 ] as const;
@@ -288,7 +288,7 @@ export const ARTICLES: Article[] = [
     cardLine: "줄여서 채우기",
     cover: "/card-career.png",
     heroQuote: "할 수 있는 일을 늘리기보다, 잘하고 싶은 일만 남기고 싶어요.",
-    lead: "사이드 프로젝트, n잡, 병행 학습. 넓히기 경쟁이 피로해지자 ‘하나만 제대로’를 택하는 사람들이 늘고 있습니다. 이 아티클에는 실행 투두가 없습니다.",
+    lead: "사이드 프로젝트, n잡, 병행 학습. 넓히기 경쟁이 피로해지자 ‘하나만 제대로’를 택하는 사람들이 늘고 있습니다. 이 아티클에는 실행 일잘TIP이 없습니다.",
     sections: [
       {
         id: "s1",
@@ -460,7 +460,7 @@ export const CALENDAR = [
     date: "2026.09.12",
     tag: "팝업",
     title: "폰프리 카페 팝업 3곳 오픈",
-    body: "입장 시 폰 파우치. 책없쾌 키워드와 묶인 브랜드 협업 공간이니 현장 스케치 투두를 미리 담아 두세요.",
+    body: "입장 시 폰 파우치. 책없쾌 키워드와 묶인 브랜드 협업 공간이니 현장 스케치 일잘TIP을 미리 담아 두세요.",
   },
   {
     date: "2026.09.18",

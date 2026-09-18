@@ -4,7 +4,7 @@ import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "캐릿 Careet",
-  description: "트렌드를 읽고, 업무에 바로 쓰는 투두로 연결합니다.",
+  description: "트렌드를 읽고, 업무에 바로 쓰는 일잘TIP으로 연결합니다.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

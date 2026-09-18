@@ -247,12 +247,12 @@ export default function WritePage() {
 
           <div ref={todoRef} className={`criteria${met ? " ok" : " bad"}`}>
             <h4>
-              투두 리스트
+              일잘TIP 리스트
               <span className={met ? "pill-ok" : "pill-bad"}>
                 {met ? "판별기준 충족" : `${form.criteria.filter(Boolean).length}/3 충족`}
               </span>
             </h4>
-            <p className="note">3가지 판별기준을 모두 충족해야 투두 리스트를 입력할 수 있습니다</p>
+            <p className="note">3가지 판별기준을 모두 충족해야 일잘TIP 리스트를 입력할 수 있습니다</p>
             {CRITERIA.map((c, i) => (
               <label key={c}>
                 <input
@@ -270,7 +270,7 @@ export default function WritePage() {
             <p className="note">
               {met
                 ? "독자가 콘텐츠를 읽고 바로 실행할 수 있는 구체적인 행동을 작성해주세요"
-                : "판별기준 미충족으로 투두 리스트가 노출되지 않습니다"}
+                : "판별기준 미충족으로 일잘TIP 리스트가 노출되지 않습니다"}
             </p>
             {form.todos.map((t, i) => (
               <div className="todo-edit" key={i}>
@@ -279,7 +279,7 @@ export default function WritePage() {
                   <input
                     value={t}
                     disabled={!met}
-                    placeholder={met ? (i === 0 ? "팀 미팅에서 업무 자율성 관련 아젠다 제안해보기" : "이번 주 내로 상사와 1:1 미팅 일정 잡기") : "투두가 입력되지 않았습니다"}
+                    placeholder={met ? (i === 0 ? "팀 미팅에서 업무 자율성 관련 아젠다 제안해보기" : "이번 주 내로 상사와 1:1 미팅 일정 잡기") : "일잘TIP이 입력되지 않았습니다"}
                     onChange={(e) => setTodo(i, e.target.value)}
                   />
                   <div className="hint">{t.length}/{TODO_MAX}자</div>
@@ -299,7 +299,7 @@ export default function WritePage() {
               disabled={!met}
               onClick={() => setForm({ ...form, todos: [...form.todos, ""] })}
             >
-              + 투두 추가
+              + 일잘TIP 추가
             </button>
           </div>
         </div>
@@ -310,7 +310,7 @@ export default function WritePage() {
             <ArticleCard article={preview} staticPreview />
           </div>
           <div className={`prev-todos${met && filledTodos.length ? "" : " disabled"}`}>
-            <h4>업무에 적용해볼 만한 투두 리스트</h4>
+            <h4>업무에 적용해 볼 만한 일잘TIP을 담아보세요!</h4>
             {met && filledTodos.length ? (
               filledTodos.map((t) => (
                 <div key={t} className="todo-row">
@@ -319,10 +319,10 @@ export default function WritePage() {
                 </div>
               ))
             ) : (
-              <p className="note">아직 작성된 투두가 없습니다</p>
+              <p className="note">아직 작성된 일잘TIP이 없습니다</p>
             )}
             <button className="panel-cta" type="button" disabled>
-              나의 투두로 가기
+              나의 일잘TIP.zip 바로 가기
             </button>
           </div>
         </aside>
@@ -366,7 +366,7 @@ export default function WritePage() {
       {modal === "no-todo" ? (
         <div className="dim">
           <div className="modal">
-            <h2>투두 리스트 없이 발행됩니다</h2>
+            <h2>일잘TIP 리스트 없이 발행됩니다</h2>
             <p>독자 화면에 실행 리스트가 노출되지 않습니다.</p>
             <div className="row">
               <button className="btn" type="button" onClick={focusTodos}>취소</button>
@@ -406,7 +406,7 @@ export default function WritePage() {
         <div className="dim">
           <div className="modal">
             <h2>발행되었습니다</h2>
-            <p>독자 화면에서 아티클과 투두를 확인해 보세요.</p>
+            <p>독자 화면에서 아티클과 일잘TIP을 확인해 보세요.</p>
             <div className="row">
               <button
                 className="btn"

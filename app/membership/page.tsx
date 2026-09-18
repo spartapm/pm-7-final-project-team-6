@@ -21,7 +21,7 @@ export default function MembershipPage() {
             <span>{plus ? "Careet Plus" : "Careet Free"}</span>
             <h2>{plus ? "캐릿 플러스" : "무료 멤버십"}</h2>
             <ul>
-              <li>아티클 · 나의 투두 · 밑줄 노트</li>
+              <li>아티클 · 일잘 TIP · 밑줄 노트</li>
               <li>트렌드 레터 구독</li>
               <li className={plus ? "" : "off"}>전광판 주간 브리프 PDF</li>
               <li className={plus ? "" : "off"}>쿠폰 멤버십 할인</li>

@@ -52,7 +52,7 @@ export default function EditProfilePage() {
             type="button"
             style={{ marginLeft: 8 }}
             onClick={() => {
-              if (window.confirm("탈퇴하면 투두·노트·임시저장이 모두 삭제됩니다.")) {
+              if (window.confirm("탈퇴하면 일잘TIP·노트·임시저장이 모두 삭제됩니다.")) {
                 withdraw();
                 router.push("/login");
               }

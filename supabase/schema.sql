@@ -26,6 +26,10 @@ create table if not exists public.todos (
   done boolean not null default false
 );
 
+alter table public.todos add column if not exists folder_id text;
+alter table public.todos add column if not exists memo text not null default '';
+alter table public.todos add column if not exists source_folder_name text;
+
 create index if not exists todos_account_id_idx on public.todos (account_id);
 
 create table if not exists public.drafts (

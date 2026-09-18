@@ -15,6 +15,15 @@ import { hashPassword, uid } from "./format";
 import type { AppState, Article, Draft, Note, Prefs } from "./types";
 import { mergePrefs, TODO_MAX } from "./types";
 import { deleteAccount, pullAccount, pushAccount, type CloudStatus } from "./cloud";
+import {
+  DONE_ID,
+  UNSORTED_ID,
+  createFolder,
+  findFolderByName,
+  folderTitle,
+  migrateTodo,
+  normalizeName,
+} from "./zip";
 
 const KEY = "careet:v2";
 const GUEST_KEY = "careet:guest";
@@ -116,6 +125,7 @@ function load(): AppState {
       ...parsed,
       extraArticles: extras,
       articles: mergeArticles(extras, parsed.email ?? ""),
+      todos: (parsed.todos ?? []).map(migrateTodo),
       loggedIn: expired ? false : Boolean(parsed.loggedIn),
       loginAt: expired ? null : loginAt,
       prefs: mergePrefs(parsed.prefs),
@@ -163,6 +173,14 @@ type Store = AppState & {
   toggleTodo: (id: string) => void;
   editTodo: (id: string, text: string) => void;
   deleteTodo: (id: string) => void;
+  setTipMemo: (id: string, memo: string) => void;
+  moveTip: (id: string, folderId: string) => void;
+  addZipFolder: (name: string) => { id: string; created: boolean };
+  renameZipFolder: (id: string, name: string) => { id: string; created: boolean };
+  deleteZipFolder: (id: string) => void;
+  toggleZipFolder: (id: string) => void;
+  reorderZipFolders: (fromId: string, toId: string) => void;
+  setOnboardingDone: (done: boolean) => void;
   addNote: (note: Omit<Note, "id" | "createdAt">) => void;
   deleteNote: (id: string) => void;
   saveDraft: (draft: Omit<Draft, "id" | "updatedAt"> & { id?: string }) => Draft;
@@ -232,7 +250,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           name: remote.name || s.name,
           email: remote.email || s.email,
           role: remote.role || s.role,
-          todos: remote.todos,
+          todos: remote.todos.map(migrateTodo),
           drafts: remote.drafts,
           extraArticles: extras,
           articles: mergeArticles(extras, remote.email || s.email),
@@ -441,6 +459,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             sourceTitle: article.title,
             addedAt: Date.now(),
             done: false,
+            folderId: UNSORTED_ID,
+            memo: "",
           },
           ...s.todos,
         ],
@@ -458,10 +478,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const toggleTodo = useCallback((id: string) => {
-    setState((s) => ({
-      ...s,
-      todos: s.todos.map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
-    }));
+    setState((s) => {
+      const folders = s.prefs.zip.folders;
+      return {
+        ...s,
+        todos: s.todos.map((t) => {
+          if (t.id !== id) return t;
+          if (!t.done) {
+            const fromId = t.folderId && t.folderId !== DONE_ID ? t.folderId : UNSORTED_ID;
+            return {
+              ...t,
+              done: true,
+              folderId: DONE_ID,
+              sourceFolderName: folderTitle(fromId, folders),
+            };
+          }
+          const backName = t.sourceFolderName;
+          const match = backName ? findFolderByName(folders, backName) : undefined;
+          const backId = match?.id || UNSORTED_ID;
+          return { ...t, done: false, folderId: backId };
+        }),
+      };
+    });
   }, []);
 
   const editTodo = useCallback((id: string, text: string) => {
@@ -477,6 +515,146 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, todos: s.todos.filter((t) => t.id !== id) }));
   }, []);
 
+  const setTipMemo = useCallback((id: string, memo: string) => {
+    setState((s) => ({
+      ...s,
+      todos: s.todos.map((t) => (t.id === id ? { ...t, memo } : t)),
+    }));
+  }, []);
+
+  const moveTip = useCallback((id: string, folderId: string) => {
+    setState((s) => ({
+      ...s,
+      todos: s.todos.map((t) => {
+        if (t.id !== id) return t;
+        if (folderId === DONE_ID) {
+          const fromId = t.folderId && t.folderId !== DONE_ID ? t.folderId : UNSORTED_ID;
+          return {
+            ...t,
+            done: true,
+            folderId: DONE_ID,
+            sourceFolderName: folderTitle(fromId, s.prefs.zip.folders),
+          };
+        }
+        return { ...t, done: false, folderId };
+      }),
+    }));
+  }, []);
+
+  const addZipFolder = useCallback((name: string) => {
+    const next = normalizeName(name);
+    let result = { id: "", created: false };
+    if (!next) return result;
+    setState((s) => {
+      const hit = findFolderByName(s.prefs.zip.folders, next);
+      if (hit) {
+        result = { id: hit.id, created: false };
+        return {
+          ...s,
+          prefs: {
+            ...s.prefs,
+            zip: {
+              ...s.prefs.zip,
+              folders: s.prefs.zip.folders.map((f) => (f.id === hit.id ? { ...f, collapsed: false } : f)),
+            },
+          },
+        };
+      }
+      const folder = createFolder(next);
+      result = { id: folder.id, created: true };
+      return {
+        ...s,
+        prefs: {
+          ...s.prefs,
+          zip: { ...s.prefs.zip, folders: [...s.prefs.zip.folders, folder] },
+        },
+      };
+    });
+    return result;
+  }, []);
+
+  const renameZipFolder = useCallback((id: string, name: string) => {
+    const next = normalizeName(name);
+    let result = { id, created: false };
+    if (!next || id === DONE_ID || id === UNSORTED_ID) return result;
+    setState((s) => {
+      const hit = findFolderByName(s.prefs.zip.folders.filter((f) => f.id !== id), next);
+      if (hit) {
+        result = { id: hit.id, created: false };
+        return {
+          ...s,
+          todos: s.todos.map((t) => (t.folderId === id ? { ...t, folderId: hit.id } : t)),
+          prefs: {
+            ...s.prefs,
+            zip: {
+              ...s.prefs.zip,
+              folders: s.prefs.zip.folders
+                .filter((f) => f.id !== id)
+                .map((f) => (f.id === hit.id ? { ...f, collapsed: false } : f)),
+            },
+          },
+        };
+      }
+      result = { id, created: true };
+      return {
+        ...s,
+        prefs: {
+          ...s.prefs,
+          zip: {
+            ...s.prefs.zip,
+            folders: s.prefs.zip.folders.map((f) => (f.id === id ? { ...f, name: next } : f)),
+          },
+        },
+      };
+    });
+    return result;
+  }, []);
+
+  const deleteZipFolder = useCallback((id: string) => {
+    if (id === DONE_ID || id === UNSORTED_ID) return;
+    setState((s) => ({
+      ...s,
+      todos: s.todos.map((t) => (t.folderId === id ? { ...t, folderId: UNSORTED_ID } : t)),
+      prefs: {
+        ...s.prefs,
+        zip: { ...s.prefs.zip, folders: s.prefs.zip.folders.filter((f) => f.id !== id) },
+      },
+    }));
+  }, []);
+
+  const toggleZipFolder = useCallback((id: string) => {
+    setState((s) => ({
+      ...s,
+      prefs: {
+        ...s.prefs,
+        zip: {
+          ...s.prefs.zip,
+          folders: s.prefs.zip.folders.map((f) => (f.id === id ? { ...f, collapsed: !f.collapsed } : f)),
+        },
+      },
+    }));
+  }, []);
+
+  const reorderZipFolders = useCallback((fromId: string, toId: string) => {
+    if (fromId === toId || fromId === DONE_ID || fromId === UNSORTED_ID || toId === DONE_ID || toId === UNSORTED_ID) return;
+    setState((s) => {
+      const folders = [...s.prefs.zip.folders];
+      const from = folders.findIndex((f) => f.id === fromId);
+      const to = folders.findIndex((f) => f.id === toId);
+      if (from < 0 || to < 0) return s;
+      const [item] = folders.splice(from, 1);
+      folders.splice(to, 0, item);
+      return { ...s, prefs: { ...s.prefs, zip: { ...s.prefs.zip, folders } } };
+    });
+  }, []);
+
+  const setOnboardingDone = useCallback((done: boolean) => {
+    setState((s) => ({
+      ...s,
+      prefs: { ...s.prefs, zip: { ...s.prefs.zip, onboardingDone: done } },
+    }));
+  }, []);
+
   const addCustomTodo = useCallback((text: string) => {
     const next = text.trim().slice(0, TODO_MAX);
     if (!next) return false;
@@ -489,6 +667,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           sourceTitle: "직접 추가",
           addedAt: Date.now(),
           done: false,
+          folderId: UNSORTED_ID,
+          memo: "",
         },
         ...s.todos,
       ],
@@ -666,6 +846,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       toggleTodo,
       editTodo,
       deleteTodo,
+      setTipMemo,
+      moveTip,
+      addZipFolder,
+      renameZipFolder,
+      deleteZipFolder,
+      toggleZipFolder,
+      reorderZipFolders,
+      setOnboardingDone,
       addNote,
       deleteNote,
       saveDraft,
@@ -699,6 +887,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       toggleTodo,
       editTodo,
       deleteTodo,
+      setTipMemo,
+      moveTip,
+      addZipFolder,
+      renameZipFolder,
+      deleteZipFolder,
+      toggleZipFolder,
+      reorderZipFolders,
+      setOnboardingDone,
       addNote,
       deleteNote,
       saveDraft,

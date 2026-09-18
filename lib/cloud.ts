@@ -98,6 +98,9 @@ export async function pullAccount(accountId: string): Promise<{
         sourceTitle: (t.source_title as string) || "",
         addedAt: fromIso(t.added_at as string),
         done: Boolean(t.done),
+        folderId: (t.folder_id as string) || undefined,
+        memo: (t.memo as string) || "",
+        sourceFolderName: (t.source_folder_name as string) || undefined,
       })),
       drafts: (draftRes.data ?? []).map((d) => ({
         id: d.id as string,
@@ -158,17 +161,32 @@ export async function pushAccount(input: CloudAccount): Promise<CloudStatus> {
   if (staleDrafts.length) await sb.from("drafts").delete().in("id", staleDrafts);
 
   if (input.todos.length) {
-    const todoRes = await sb.from("todos").upsert(
-      input.todos.map((t) => ({
-        id: t.id,
-        account_id: input.id,
-        text: t.text,
-        source_article_id: t.sourceArticleId ?? null,
-        source_title: t.sourceTitle,
-        added_at: toIso(t.addedAt),
-        done: t.done,
-      })),
-    );
+    const rows = input.todos.map((t) => ({
+      id: t.id,
+      account_id: input.id,
+      text: t.text,
+      source_article_id: t.sourceArticleId ?? null,
+      source_title: t.sourceTitle,
+      added_at: toIso(t.addedAt),
+      done: t.done,
+      folder_id: t.folderId ?? null,
+      memo: t.memo ?? "",
+      source_folder_name: t.sourceFolderName ?? null,
+    }));
+    let todoRes = await sb.from("todos").upsert(rows);
+    if (todoRes.error && /folder_id|memo|source_folder_name/i.test(todoRes.error.message)) {
+      todoRes = await sb.from("todos").upsert(
+        input.todos.map((t) => ({
+          id: t.id,
+          account_id: input.id,
+          text: t.text,
+          source_article_id: t.sourceArticleId ?? null,
+          source_title: t.sourceTitle,
+          added_at: toIso(t.addedAt),
+          done: t.done,
+        })),
+      );
+    }
     if (todoRes.error) {
       console.warn("[supabase] todos", todoRes.error.message);
       return "error";
