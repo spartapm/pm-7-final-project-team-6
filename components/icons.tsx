@@ -68,6 +68,7 @@ export function IconFolderMini() {
     <svg width="16" height="14" viewBox="0 0 16 14" fill="none" aria-hidden>
       <path
         d="M1.4 3.2h4.1l1.2 1.5h7.9v7.2H1.4V3.2Z"
+        fill="currentColor"
         stroke="currentColor"
         strokeWidth="1.3"
         strokeLinejoin="round"

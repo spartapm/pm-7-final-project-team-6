@@ -80,13 +80,9 @@ export function TipZip() {
   return (
     <div className="zip-board">
       <div className="zip-title-row" data-zip-spot="title">
-        <div className="zip-layers" aria-hidden>
-          <i />
-          <b />
-        </div>
-        <h2>
-          일잘 TIP <span className="zip-badge">.ZIP</span>
-        </h2>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="zip-tab-img" src="/zip-folder-tab.png" width={168} height={82} alt="일잘 TIP .ZIP" />
+        <h2>일잘 TIP .ZIP</h2>
       </div>
 
       {allEmpty ? (
@@ -334,7 +330,7 @@ function ZipFolderCard({
 
   return (
     <section
-      className={`zip-folder${fixed ? " fixed" : ""}${flash ? " section-flash" : ""}`}
+      className={`zip-folder${fixed ? " fixed" : ""}${shut ? " collapsed" : ""}${flash ? " section-flash" : ""}`}
       data-zip-spot={spot && spot !== "drag" ? spot : undefined}
       onDragOver={(e) => {
         if (onDropFolder || onDropTip) e.preventDefault();
@@ -513,9 +509,6 @@ function TipCard({
           >
             <IconMemo filled={Boolean(tip.memo)} />
           </button>
-          <button className="ghost muted-x" type="button" aria-label="TIP 삭제" onClick={onDelete}>
-            <IconClose />
-          </button>
           <div className="zip-more">
             <button className="ghost" type="button" aria-label="이동 메뉴" onClick={onMenu}>
               <IconDots />
@@ -537,6 +530,9 @@ function TipCard({
               </div>
             ) : null}
           </div>
+          <button className="ghost muted-x" type="button" aria-label="TIP 삭제" onClick={onDelete}>
+            <IconClose />
+          </button>
         </div>
         <div className="meta">
           {tip.sourceArticleId ? (
@@ -587,45 +583,65 @@ function Onboarding({
   const item = ONBOARD[step];
   const last = step === ONBOARD.length - 1;
   const [box, setBox] = useState<DOMRect | null>(null);
+  const [vp, setVp] = useState({ w: 0, h: 0 });
 
   useEffect(() => {
     const spot = item.spot === "drag" && !hasCustom ? "add" : item.spot;
-    const el = document.querySelector(`[data-zip-spot="${spot}"]`) as HTMLElement | null;
-    if (!el) {
-      setBox(null);
-      return;
-    }
-    const update = () => setBox(el.getBoundingClientRect());
-    update();
-    window.addEventListener("resize", update);
-    window.addEventListener("scroll", update, true);
-    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    const measure = () => {
+      setVp({ w: window.innerWidth, h: window.innerHeight });
+      let nextSpot = spot;
+      if (nextSpot === "check" && !document.querySelector('[data-zip-spot="check"]')) {
+        nextSpot = "unsorted";
+      }
+      const el = document.querySelector(`[data-zip-spot="${nextSpot}"]`) as HTMLElement | null;
+      if (!el) {
+        setBox(null);
+        return;
+      }
+      setBox(el.getBoundingClientRect());
+    };
+    measure();
+    const scrollEl = document.querySelector(
+      `[data-zip-spot="${spot === "check" && !document.querySelector('[data-zip-spot="check"]') ? "unsorted" : spot}"]`,
+    ) as HTMLElement | null;
+    scrollEl?.scrollIntoView({ block: "center", behavior: "smooth" });
+    const later = window.setTimeout(measure, 320);
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true);
     return () => {
-      window.removeEventListener("resize", update);
-      window.removeEventListener("scroll", update, true);
+      window.clearTimeout(later);
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, true);
     };
   }, [item.spot, hasCustom, step]);
 
   const cardStyle = useMemo(() => {
-    if (!box) return { top: "30%", left: "50%", transform: "translateX(-50%)" } as const;
-    const preferRight = item.spot === "drag";
-    const rawLeft = preferRight ? box.right + 16 : box.left;
-    const left = Math.min(Math.max(24, rawLeft), Math.max(24, window.innerWidth - 344));
-    const below = box.bottom + 16;
-    const top = below + 180 > window.innerHeight ? Math.max(24, box.top - 180) : Math.max(24, preferRight ? box.top - 20 : below);
-    return { top, left };
-  }, [box, item.spot]);
+    if (!box || !vp.w) return { top: "28%", left: "50%", transform: "translateX(-50%)" } as const;
+    const cardW = 320;
+    const cardH = 200;
+    const pad = 16;
+    let left = box.right + pad;
+    let top = box.top - 8;
+    if (left + cardW > vp.w - 24) {
+      left = Math.max(24, box.left - cardW - pad);
+    }
+    if (left < 24) left = 24;
+    if (left + cardW > vp.w - 24) left = Math.max(24, vp.w - cardW - 24);
+    if (top + cardH > vp.h - 24) top = Math.max(24, box.bottom - cardH);
+    if (top < 24) top = 24;
+    return { top, left, transform: "none" } as const;
+  }, [box, vp]);
 
   return (
     <div className="zip-onboard">
-      <svg className="zip-mask" aria-hidden>
+      <svg className="zip-mask" aria-hidden width={vp.w} height={vp.h} viewBox={`0 0 ${vp.w} ${vp.h}`} preserveAspectRatio="none">
         <defs>
           <mask id="zip-cut">
             <rect width="100%" height="100%" fill="white" />
             {box ? (
               <rect
-                x={box.left - 8}
-                y={box.top - 8}
+                x={Math.max(0, box.left - 8)}
+                y={Math.max(0, box.top - 8)}
                 width={box.width + 16}
                 height={box.height + 16}
                 rx="14"

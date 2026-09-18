@@ -80,7 +80,7 @@ export function TodoLayer({
   };
 
   return (
-    <div className="article-tools">
+    <div className={`article-tools${open || composer ? " open" : ""}`}>
       <div className="rail">
         <button className="rail-btn" type="button" aria-label="맨 위로" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
           <IconTop />
