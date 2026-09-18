@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { IconBookmark, IconCheck, IconHighlight, IconList, IconPencil, IconShare, IconTop } from "./icons";
+import { IconBookmark, IconBulb, IconCheck, IconHighlight, IconPencil, IconPlusSm, IconShare, IconTop } from "./icons";
 import { useStore } from "@/lib/store";
 import type { Article } from "@/lib/types";
 import { TODO_MAX } from "@/lib/types";
@@ -117,7 +117,7 @@ export function TodoLayer({
               });
             }}
           >
-            <IconList />
+            <IconBulb />
             <span className="new-badge">NEW</span>
           </button>
         ) : null}
@@ -169,8 +169,8 @@ export function TodoLayer({
               return (
                 <div key={t.id} className={`todo-row${already ? " saved" : ""}`}>
                   {flash === t.id ? <span className="save-pop">담기 완료!</span> : null}
-                  <button className="check" type="button" onClick={() => save(t)} aria-label={already ? "담기 해제" : "담기"}>
-                    {already ? <IconCheck /> : null}
+                  <button className="check save" type="button" onClick={() => save(t)} aria-label={already ? "담기 해제" : "담기"}>
+                    {already ? <IconCheck /> : <IconPlusSm />}
                   </button>
                   {editingId === t.id && !already ? (
                     <input
@@ -212,7 +212,7 @@ export function TodoLayer({
             type="button"
             onClick={() => router.push("/me")}
           >
-            나의 일잘TIP.zip 바로 가기
+            일잘TIP.zip 바로 가기
           </button>
         </aside>
       ) : (

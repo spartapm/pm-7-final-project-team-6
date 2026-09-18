@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { IconCheck, IconClose, IconDots, IconEdit, IconGrip, IconHelp, IconMemo } from "./icons";
+import { IconCheck, IconClose, IconDots, IconEdit, IconFolderMini, IconGrip, IconHelp, IconMemo, IconPin } from "./icons";
 import { formatDotDate } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import type { UserTodo, ZipFolder } from "@/lib/types";
@@ -21,13 +21,13 @@ const ONBOARD = [
   },
   {
     spot: "check",
-    title: "완료하면 자동으로 이동해요",
-    body: "체크하면 완료 폴더로 자동 이동해요. 다시 누르면 원래 있던 폴더로 돌아가요.",
+    title: "완료하면\n자동으로 이동해요",
+    body: "체크하면 완료 폴더로 자동 이동해요.\n다시 누르면 원래 있던 폴더로 돌아가요.",
   },
   {
     spot: "add",
-    title: "폴더 이름 추천도 해줘요",
-    body: "클릭하면 업무에 맞는 폴더 이름을 추천해드려요.",
+    title: "폴더를 추가할 수 있어요",
+    body: "폴더를 추가해서 일잘 TIP을 입맛대로 정리 해보세요",
   },
   {
     spot: "drag",
@@ -85,7 +85,7 @@ export function TipZip() {
           <b />
         </div>
         <h2>
-          일잘 TIP<span className="zip-badge">.ZIP</span>
+          일잘 TIP <span className="zip-badge">.ZIP</span>
         </h2>
       </div>
 
@@ -335,7 +335,7 @@ function ZipFolderCard({
   return (
     <section
       className={`zip-folder${fixed ? " fixed" : ""}${flash ? " section-flash" : ""}`}
-      data-zip-spot={spot}
+      data-zip-spot={spot && spot !== "drag" ? spot : undefined}
       onDragOver={(e) => {
         if (onDropFolder || onDropTip) e.preventDefault();
       }}
@@ -348,11 +348,20 @@ function ZipFolderCard({
       }}
     >
       <header className="zip-folder-h">
-        {fixed ? null : (
+        {fixed ? (
+          id === DONE_ID ? (
+            <span className="zip-pin" aria-label="고정">
+              <IconPin />
+            </span>
+          ) : (
+            <span className="zip-pin spacer" aria-hidden />
+          )
+        ) : (
           <button
             className="zip-grip"
             type="button"
             aria-label="드래그 핸들"
+            data-zip-spot={spot === "drag" ? "drag" : undefined}
             draggable
             onDragStart={(e) => {
               e.dataTransfer.setData("zip-folder", id);
@@ -362,6 +371,9 @@ function ZipFolderCard({
             <IconGrip />
           </button>
         )}
+        <span className="zip-folder-ico" aria-hidden>
+          <IconFolderMini />
+        </span>
         <button className="zip-fold-toggle" type="button" onClick={onToggle} disabled={fixed}>
           <span className={`chev${shut ? "" : " open"}`}>▾</span>
           <strong>{title}</strong>
@@ -468,14 +480,19 @@ function TipCard({
   ].filter((f) => f.id !== currentId && f.id !== DONE_ID);
 
   return (
-    <article
-      className={`zip-tip${tip.done ? " done" : ""}`}
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.setData("zip-tip", tip.id);
-        e.dataTransfer.effectAllowed = "move";
-      }}
-    >
+    <article className={`zip-tip${tip.done ? " done" : ""}`}>
+      <button
+        className="zip-grip tip-grip"
+        type="button"
+        aria-label="TIP 드래그 핸들"
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.setData("zip-tip", tip.id);
+          e.dataTransfer.effectAllowed = "move";
+        }}
+      >
+        <IconGrip />
+      </button>
       <button
         className="check round"
         type="button"
@@ -495,6 +512,9 @@ function TipCard({
             onClick={() => setMemoOpen((v) => !v)}
           >
             <IconMemo filled={Boolean(tip.memo)} />
+          </button>
+          <button className="ghost muted-x" type="button" aria-label="TIP 삭제" onClick={onDelete}>
+            <IconClose />
           </button>
           <div className="zip-more">
             <button className="ghost" type="button" aria-label="이동 메뉴" onClick={onMenu}>
@@ -531,13 +551,22 @@ function TipCard({
           {tip.done && tip.sourceFolderName ? <span className="origin-badge">{tip.sourceFolderName}</span> : null}
         </div>
         {memoOpen ? (
-          <textarea
-            className="zip-memo"
-            value={memo}
-            placeholder="나만의 메모를 여기에 남겨요..."
-            onChange={(e) => setMemo(e.target.value)}
-            onBlur={() => onMemo(memo)}
-          />
+          <div className="zip-memo-wrap">
+            <textarea
+              className="zip-memo"
+              value={memo}
+              placeholder="나만의 메모를 여기에 남겨요..."
+              onChange={(e) => setMemo(e.target.value)}
+              onBlur={() => onMemo(memo)}
+            />
+            <button
+              className="zip-memo-save"
+              type="button"
+              onClick={() => onMemo(memo)}
+            >
+              완료
+            </button>
+          </div>
         ) : null}
       </div>
     </article>
@@ -579,11 +608,13 @@ function Onboarding({
 
   const cardStyle = useMemo(() => {
     if (!box) return { top: "30%", left: "50%", transform: "translateX(-50%)" } as const;
+    const preferRight = item.spot === "drag";
+    const rawLeft = preferRight ? box.right + 16 : box.left;
+    const left = Math.min(Math.max(24, rawLeft), Math.max(24, window.innerWidth - 344));
     const below = box.bottom + 16;
-    const top = below + 180 > window.innerHeight ? Math.max(24, box.top - 180) : below;
-    const left = Math.min(Math.max(24, box.left), window.innerWidth - 360);
+    const top = below + 180 > window.innerHeight ? Math.max(24, box.top - 180) : Math.max(24, preferRight ? box.top - 20 : below);
     return { top, left };
-  }, [box]);
+  }, [box, item.spot]);
 
   return (
     <div className="zip-onboard">

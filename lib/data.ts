@@ -232,7 +232,7 @@ export const ARTICLES: Article[] = [
       { id: "dg-1", text: "다음 콘텐츠 카피 한 줄을 \"왜 사야 하나\" 대신 \"왜 지금 끌리는지\" 앵글로 바꿔 기획해보기" },
       { id: "dg-2", text: "3초 안에 결제 이유가 보이는 장면 1개를 이번 주 캠페인에 넣기" },
     ],
-    published: true,
+    published: false,
   },
   {
     id: "volatile",
@@ -272,7 +272,7 @@ export const ARTICLES: Article[] = [
       { id: "vo-1", text: "이번 주 보고 1건을 문서 대신 3분 음성으로 먼저 공유해보기" },
       { id: "vo-2", text: "결정·액션만 슬랙에 한 줄로 남기는 템플릿을 팀 채널에 붙여보기" },
     ],
-    published: true,
+    published: false,
   },
   {
     id: "career",
@@ -309,7 +309,7 @@ export const ARTICLES: Article[] = [
       },
     ],
     todos: [],
-    published: true,
+    published: false,
   },
 ];
 

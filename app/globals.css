@@ -804,9 +804,9 @@ button { cursor: pointer; }
   position: relative;
   flex: none;
 }
-.todo-fab.open, .todo-fab:hover { background: var(--lime); color: #111; }
-.todo-fab.seen { background: #404040; }
-.todo-fab.seen:hover { background: var(--lime); color: #111; }
+.todo-fab.open, .todo-fab:hover { background: var(--lime); color: #ff6b1a; }
+.todo-fab.seen { background: #404040; color: #fff; }
+.todo-fab.seen:hover { background: var(--lime); color: #ff6b1a; }
 .todo-fab .new-badge {
   position: absolute;
   top: -4px;
@@ -815,8 +815,8 @@ button { cursor: pointer; }
   height: 14px;
   padding: 0 4px;
   border-radius: 99px;
-  background: var(--lime);
-  color: #111;
+  background: #ff6b1a;
+  color: #fff;
   font-size: 8px;
   font-weight: 800;
   letter-spacing: 0.02em;
@@ -881,7 +881,18 @@ button { cursor: pointer; }
   background: #fff;
 }
 .check svg { display: block; }
+.check.save {
+  border-radius: 99px;
+  border-color: #ff6b1a;
+  color: #ff6b1a;
+  background: #fff;
+}
 .todo-row.saved .check { background: #111; color: var(--lime); border-color: #111; }
+.todo-row.saved .check.save {
+  background: var(--lime);
+  color: #111;
+  border-color: #ff6b1a;
+}
 .todo-edit {
   flex: 1;
   font: inherit;
@@ -1553,13 +1564,13 @@ button { cursor: pointer; }
 .zip-title-row { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
 .zip-title-row h2 { margin: 0; font-size: 28px; letter-spacing: -0.04em; display: flex; align-items: center; gap: 8px; }
 .zip-layers {
-  width: 46px; height: 36px; position: relative; flex: none;
+  width: 52px; height: 40px; position: relative; flex: none;
 }
 .zip-layers i, .zip-layers b {
-  position: absolute; left: 0; right: 0; height: 22px; border-radius: 4px 4px 0 0;
+  position: absolute; left: 0; right: 0; height: 24px; border-radius: 5px 5px 0 0;
 }
-.zip-layers i { top: 0; background: #111; transform: scale(0.86); transform-origin: top center; }
-.zip-layers b { top: 10px; background: var(--gray-bg); border: 1px solid #e5e7eb; }
+.zip-layers i { top: 0; background: #111; transform: scale(0.82); transform-origin: top center; }
+.zip-layers b { top: 12px; height: 26px; background: #f3f4f6; border: 1.5px solid #111; border-radius: 4px; }
 .zip-badge {
   display: inline-block;
   background: var(--lime);
@@ -1589,7 +1600,13 @@ button { cursor: pointer; }
   display: flex; align-items: center; gap: 8px;
   padding: 14px 16px 10px;
 }
-.zip-grip { border: 0; background: transparent; color: #9ca3af; padding: 4px; cursor: grab; }
+.zip-grip { border: 0; background: transparent; color: #9ca3af; padding: 4px; cursor: grab; display: grid; place-items: center; }
+.zip-grip:active { cursor: grabbing; }
+.zip-pin {
+  width: 22px; height: 22px; display: grid; place-items: center; color: #9ca3af; flex: none;
+}
+.zip-pin.spacer { visibility: hidden; }
+.zip-folder-ico { color: #111; display: grid; place-items: center; flex: none; }
 .zip-fold-toggle {
   flex: 1; display: flex; align-items: center; gap: 8px;
   border: 0; background: transparent; text-align: left; padding: 0;
@@ -1606,11 +1623,13 @@ button { cursor: pointer; }
 .zip-folder-empty { color: var(--gray-body); font-size: 13px; padding: 18px 12px 12px; }
 .zip-tip {
   display: grid;
-  grid-template-columns: 28px 1fr;
-  gap: 10px;
+  grid-template-columns: 20px 28px 1fr;
+  gap: 8px;
   padding: 14px 8px;
   border-top: 1px solid var(--gray-line);
+  align-items: start;
 }
+.zip-tip .tip-grip { padding-top: 6px; }
 .zip-tip.done .title { color: var(--gray-done); text-decoration: line-through; }
 .zip-tip-body .title { font-size: 15px; font-weight: 600; letter-spacing: -0.02em; overflow-wrap: anywhere; }
 .zip-tip-body .title-row { display: flex; align-items: flex-start; gap: 6px; }
@@ -1622,9 +1641,14 @@ button { cursor: pointer; }
   border-radius: 99px; padding: 1px 8px; font-size: 11px; font-weight: 700;
 }
 .memo-btn.has { color: var(--orange); }
+.zip-memo-wrap { margin-top: 8px; }
 .zip-memo {
-  width: 100%; margin-top: 8px; min-height: 72px; border: 1px solid var(--gray-line);
+  width: 100%; min-height: 72px; border: 1px solid var(--gray-line);
   border-radius: 10px; padding: 10px; font-size: 13px; resize: vertical;
+}
+.zip-memo-save {
+  margin-top: 8px; height: 32px; padding: 0 12px; border: 0; border-radius: 8px;
+  background: #111; color: #fff; font-size: 13px; font-weight: 700;
 }
 .zip-more { position: relative; }
 .zip-menu {
@@ -1678,8 +1702,8 @@ button { cursor: pointer; }
   position: absolute; width: 320px; background: #fff; border-radius: 16px;
   padding: 18px 18px 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.2); z-index: 82;
 }
-.zip-card h3 { margin: 0 0 8px; font-size: 16px; }
-.zip-card p { margin: 0 0 14px; font-size: 13px; color: var(--gray-body); line-height: 1.5; }
+.zip-card h3 { margin: 0 0 8px; font-size: 16px; white-space: pre-line; }
+.zip-card p { margin: 0 0 14px; font-size: 13px; color: var(--gray-body); line-height: 1.5; white-space: pre-line; }
 .zip-dots { display: flex; gap: 6px; margin-bottom: 12px; }
 .zip-dots i { width: 8px; height: 8px; border-radius: 99px; background: #e5e7eb; display: block; }
 .zip-dots i.on { background: #111; }

@@ -314,7 +314,7 @@ export default function WritePage() {
             {met && filledTodos.length ? (
               filledTodos.map((t) => (
                 <div key={t} className="todo-row">
-                  <span className="check" />
+                  <span className="check save" />
                   <span>{t}</span>
                 </div>
               ))
@@ -322,7 +322,7 @@ export default function WritePage() {
               <p className="note">아직 작성된 일잘TIP이 없습니다</p>
             )}
             <button className="panel-cta" type="button" disabled>
-              나의 일잘TIP.zip 바로 가기
+              일잘TIP.zip 바로 가기
             </button>
           </div>
         </aside>

@@ -28,6 +28,7 @@ import {
 const KEY = "careet:v2";
 const GUEST_KEY = "careet:guest";
 const PW_KEY = "careet:pw";
+const EXTRAS_KEY = "careet:published";
 const SESSION_MS = 30 * 24 * 60 * 60 * 1000;
 
 type GuestSnap = Pick<AppState, "todos" | "notes" | "readIds" | "savedIds" | "prefs">;
@@ -66,11 +67,31 @@ export function accountIdFor(email: string) {
   return `careet_${email.trim().toLowerCase()}`;
 }
 
-function mergeArticles(extras: Article[], email = ""): Article[] {
-  const extra = isEditorEmail(email)
-    ? extras.filter((a) => a?.id && !ARTICLES.some((b) => b.id === a.id))
-    : [];
+function mergeArticles(extras: Article[]): Article[] {
+  const extra = extras.filter((a) => a?.id && !ARTICLES.some((b) => b.id === a.id));
   return [...extra, ...ARTICLES];
+}
+
+function readPublishedExtras(): Article[] {
+  if (typeof window === "undefined") return [];
+  try {
+    return ((JSON.parse(localStorage.getItem(EXTRAS_KEY) || "[]") as Article[]) ?? []).filter((a) => a?.id);
+  } catch {
+    return [];
+  }
+}
+
+function writePublishedExtras(list: Article[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(EXTRAS_KEY, JSON.stringify(list));
+}
+
+function uniqArticles(list: Article[]) {
+  const map = new Map<string, Article>();
+  for (const a of list) {
+    if (a?.id) map.set(a.id, a);
+  }
+  return [...map.values()];
 }
 
 function todayKey() {
@@ -112,19 +133,23 @@ function empty(partial?: Partial<AppState>): AppState {
 }
 
 function load(): AppState {
-  const fallback = empty();
+  const fallbackExtras = typeof window === "undefined" ? [] : readPublishedExtras();
+  const fallback = empty({
+    extraArticles: fallbackExtras,
+    articles: mergeArticles(fallbackExtras),
+  });
   if (typeof window === "undefined") return fallback;
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return fallback;
     const parsed = JSON.parse(raw) as Partial<AppState>;
-    const extras = parsed.extraArticles ?? [];
+    const extras = uniqArticles([...(parsed.extraArticles ?? []), ...fallbackExtras]);
     const loginAt = parsed.loginAt ?? null;
     const expired = Boolean(parsed.loggedIn && loginAt && Date.now() - loginAt > SESSION_MS);
     return empty({
       ...parsed,
       extraArticles: extras,
-      articles: mergeArticles(extras, parsed.email ?? ""),
+      articles: mergeArticles(extras),
       todos: (parsed.todos ?? []).map(migrateTodo),
       loggedIn: expired ? false : Boolean(parsed.loggedIn),
       loginAt: expired ? null : loginAt,
@@ -243,7 +268,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return;
       }
       setState((s) => {
-        const extras = remote.extraArticles;
+        const extras = uniqArticles(
+          remote.extraArticles.length ? remote.extraArticles : [...s.extraArticles, ...readPublishedExtras()],
+        );
         return {
           ...s,
           accountId,
@@ -253,7 +280,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           todos: remote.todos.map(migrateTodo),
           drafts: remote.drafts,
           extraArticles: extras,
-          articles: mergeArticles(extras, remote.email || s.email),
+          articles: mergeArticles(extras),
           readIds: remote.readIds,
           savedIds: remote.savedIds,
           notes: remote.notes,
@@ -280,6 +307,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!hydrated) return;
     localStorage.setItem(KEY, JSON.stringify({ ...state, articles: undefined }));
+    writePublishedExtras(state.extraArticles);
   }, [hydrated, state]);
 
   useEffect(() => {
@@ -334,6 +362,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           Boolean(remote?.prefs.passwordHash) ||
           Boolean(remote?.todos.length) ||
           Boolean(remote?.extraArticles.length);
+        const extras = uniqArticles(
+          (hasRemote && remote?.extraArticles?.length ? remote.extraArticles : current.extraArticles) ?? [],
+        );
         const next = empty({
           accountId: id,
           loggedIn: true,
@@ -343,8 +374,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           role: "에디터",
           todos: hasRemote ? (remote?.todos ?? []) : [],
           drafts: hasRemote ? (remote?.drafts ?? []) : [],
-          extraArticles: hasRemote ? (remote?.extraArticles ?? []) : [],
-          articles: mergeArticles(hasRemote ? (remote?.extraArticles ?? []) : [], clean),
+          extraArticles: extras,
+          articles: mergeArticles(extras),
           readIds: hasRemote ? (remote?.readIds ?? []) : [],
           savedIds: hasRemote ? (remote?.savedIds ?? []) : [],
           notes: hasRemote ? (remote?.notes ?? []) : [],
@@ -367,7 +398,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         email: clean,
         name: name?.trim() || current.name || remote?.name || "김캐릿",
         role: remote?.role || current.role || "트렌드 담당자",
-        articles: mergeArticles(current.extraArticles, clean),
+        articles: mergeArticles(current.extraArticles),
         prefs: mergePrefs({
           ...current.prefs,
           ...(isDemo ? { points: Math.max(current.prefs.points, remote?.prefs.points ?? 0, 800) } : {}),
@@ -385,11 +416,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const current = stateRef.current;
     if (isEditorEmail(current.email)) {
       const guest = readGuestSnap();
+      const extras = uniqArticles([...current.extraArticles, ...readPublishedExtras()]);
       setState(
         empty({
           ...(guest ?? {}),
-          articles: ARTICLES,
-          extraArticles: [],
+          extraArticles: extras,
+          articles: mergeArticles(extras),
         }),
       );
     } else {
@@ -708,7 +740,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return {
         ...s,
         extraArticles,
-        articles: mergeArticles(extraArticles, s.email),
+        articles: mergeArticles(extraArticles),
       };
     });
     showToast("발행글을 삭제했습니다");
@@ -754,7 +786,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setState((s) => ({
         ...s,
         extraArticles: [article, ...s.extraArticles],
-        articles: mergeArticles([article, ...s.extraArticles], s.email),
+        articles: mergeArticles([article, ...s.extraArticles]),
       }));
       return article;
     },

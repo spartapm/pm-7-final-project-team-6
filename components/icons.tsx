@@ -38,6 +38,52 @@ export function IconList() {
   );
 }
 
+export function IconBulb() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M9 21h6M10 18h4"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 3.2a6.3 6.3 0 0 0-3.4 11.5c.6.45 1 1.15 1.1 1.9h4.6c.1-.75.5-1.45 1.1-1.9A6.3 6.3 0 0 0 12 3.2Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+export function IconPlusSm() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
+      <path d="M6 2.2v7.6M2.2 6h7.6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconFolderMini() {
+  return (
+    <svg width="16" height="14" viewBox="0 0 16 14" fill="none" aria-hidden>
+      <path
+        d="M1.4 3.2h4.1l1.2 1.5h7.9v7.2H1.4V3.2Z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function IconPin() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+      <path d="M4.2 7.4 2 10.8M4.4 2.1l5.5 5.5-2.1.4-3.4-3.4.4-2.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function IconTop() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>

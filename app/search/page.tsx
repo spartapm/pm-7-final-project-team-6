@@ -22,7 +22,7 @@ function SearchInner() {
         ]
           .join(" ")
           .toLowerCase();
-        return hay.includes(needle);
+        return a.published && hay.includes(needle);
       })
     : [];
 
