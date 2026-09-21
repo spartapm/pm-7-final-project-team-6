@@ -729,11 +729,20 @@ function Onboarding({
     const cardW = 320;
     const cardH = 210;
     const gap = 16;
-    const small = box.width < 140;
-    let left = small ? box.right + gap : box.left + Math.min(box.width + gap, 184);
-    let top = small ? box.top + box.height / 2 - 48 : box.top - 12;
-    left = Math.min(Math.max(16, left), Math.max(16, vp.w - cardW - 16));
-    top = Math.min(Math.max(88, top), Math.max(88, vp.h - cardH - 16));
+    const pad = 16;
+    const rightLeft = box.right + gap;
+    const leftLeft = box.left - gap - cardW;
+    let left: number;
+    let top = box.top;
+    if (rightLeft + cardW <= vp.w - pad) {
+      left = rightLeft;
+    } else if (leftLeft >= pad) {
+      left = leftLeft;
+    } else {
+      left = Math.min(Math.max(pad, box.left), vp.w - cardW - pad);
+      top = box.bottom + gap;
+    }
+    top = Math.min(Math.max(88, top), Math.max(88, vp.h - cardH - pad));
     return { top, left, transform: "none" } as const;
   }, [box, vp]);
 
