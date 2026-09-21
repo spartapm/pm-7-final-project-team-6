@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { IconCheck, IconClose, IconDots, IconEdit, IconFolderMini, IconGrip, IconHelp, IconMemo } from "./icons";
+import { IconCheck, IconClose, IconDots, IconEdit, IconFolderMini, IconGrip, IconHelp, IconMemo, IconPencil } from "./icons";
 import { formatDotDate } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import type { UserTodo, ZipFolder } from "@/lib/types";
+import { TODO_MAX } from "@/lib/types";
 import { DONE_ID, FOLDER_SUGGESTIONS, UNSORTED_ID, folderTitle, tipsIn } from "@/lib/zip";
 
 const ONBOARD = [
@@ -37,10 +38,42 @@ const ONBOARD = [
 ] as const;
 
 const STEP5_CALLS = [
-  { spot: "drag", label: "드래그 해서 폴더 순서를 바꿀 수 있어요" },
-  { spot: "move", label: "TIP을 다른 폴더로 옮길 수 있어요" },
-  { spot: "memo", label: "내 생각을 메모로 남겨보세요" },
+  { spot: "drag", label: "드래그 해서 폴더 순서를 바꿀 수 있어요", side: "right" as const, w: 228, h: 52 },
+  { spot: "move", label: "TIP을 다른 폴더로 옮길 수 있어요", side: "right" as const, w: 228, h: 52 },
+  { spot: "memo", label: "내 생각을 메모로 남겨보세요", side: "left" as const, w: 240, h: 108, cta: true },
 ] as const;
+
+type Box = { l: number; t: number; w: number; h: number };
+
+function boxesOverlap(a: Box, b: Box, gap = 10) {
+  return a.l < b.l + b.w + gap && a.l + a.w + gap > b.l && a.t < b.t + b.h + gap && a.t + a.h + gap > b.t;
+}
+
+function placeCallout(
+  target: DOMRect,
+  vp: { w: number; h: number },
+  side: "left" | "right",
+  w: number,
+  ht: number,
+  blocked: Box[],
+) {
+  const pad = 16;
+  let left = side === "right" ? target.right + 14 : target.left - 14 - w;
+  if (left < pad) left = target.right + 14;
+  if (left + w > vp.w - pad) left = Math.max(pad, target.left - 14 - w);
+  left = Math.min(Math.max(pad, left), Math.max(pad, vp.w - w - pad));
+  let top = Math.max(88, Math.min(target.top - 6, vp.h - ht - pad));
+  const box: Box = { l: left, t: top, w, h: ht };
+  for (let i = 0; i < 14; i += 1) {
+    const hit = blocked.find((b) => boxesOverlap(box, b));
+    if (!hit) break;
+    const below = hit.t + hit.h + 12;
+    if (below + ht <= vp.h - pad) box.t = below;
+    else box.t = Math.max(88, hit.t - ht - 12);
+  }
+  const point: "left" | "right" = box.l + w / 2 < target.left + target.width / 2 ? "right" : "left";
+  return { top: box.t, left: box.l, point, box };
+}
 
 const TOUR_DEMO_TIP: UserTodo = {
   id: "tour-demo-tip",
@@ -58,6 +91,7 @@ export function TipZip() {
     prefs,
     toggleTodo,
     deleteTodo,
+    editTodo,
     setTipMemo,
     moveTip,
     reorderTips,
@@ -78,8 +112,12 @@ export function TipZip() {
   const allEmpty = todos.length === 0;
   const customIds = folders.map((f) => f.id);
   const touring = tour !== null;
+  const lastTour = tour === ONBOARD.length - 1;
   const showTourCheck = touring && tipsIn(todos, UNSORTED_ID).length === 0;
   const showTourFolder = touring && customIds.length === 0;
+  const leadFolder = folders[0];
+  const leadTips = leadFolder ? tipsIn(todos, leadFolder.id) : [];
+  const showTourActionTip = touring && lastTour && !showTourFolder && leadTips.length === 0;
 
   const pulse = (id: string) => {
     setFlash(id);
@@ -129,6 +167,7 @@ export function TipZip() {
             onMemo={setTipMemo}
             onMove={moveTip}
             onReorderTip={reorderTips}
+            onEditTip={editTodo}
             onDeleteTip={deleteTodo}
           />
           <ZipFolderCard
@@ -137,6 +176,7 @@ export function TipZip() {
             todos={showTourCheck ? [TOUR_DEMO_TIP] : tipsIn(todos, UNSORTED_ID)}
             folders={folders}
             fixed
+            unsorted
             collapsed={!touring && prefs.zip.unsortedCollapsed}
             flash={flash === UNSORTED_ID}
             spot="unsorted"
@@ -149,6 +189,7 @@ export function TipZip() {
             onMemo={setTipMemo}
             onMove={moveTip}
             onReorderTip={reorderTips}
+            onEditTip={editTodo}
             onDeleteTip={deleteTodo}
             onDropTip={(tipId) => moveTip(tipId, UNSORTED_ID)}
           />
@@ -157,11 +198,13 @@ export function TipZip() {
               key={f.id}
               id={f.id}
               title={f.name}
-              todos={tipsIn(todos, f.id)}
+              todos={i === 0 && showTourActionTip ? [TOUR_DEMO_TIP] : tipsIn(todos, f.id)}
               folders={folders}
-              collapsed={f.collapsed}
+              collapsed={!touring && f.collapsed}
               flash={flash === f.id}
               spot={i === 0 ? "drag" : undefined}
+              actionSpot={lastTour && i === 0}
+              preview={i === 0 && showTourActionTip}
               openMenu={openMenu}
               setOpenMenu={setOpenMenu}
               onToggle={() => toggleZipFolder(f.id)}
@@ -174,6 +217,7 @@ export function TipZip() {
               onMemo={setTipMemo}
               onMove={moveTip}
               onReorderTip={reorderTips}
+              onEditTip={editTodo}
               onDeleteTip={deleteTodo}
               onDropFolder={(fromId) => reorderZipFolders(fromId, f.id)}
               onDropTip={(tipId) => moveTip(tipId, f.id)}
@@ -183,9 +227,10 @@ export function TipZip() {
             <ZipFolderCard
               id="tour-demo-folder"
               title="월별 프로모션"
-              todos={[]}
+              todos={[TOUR_DEMO_TIP]}
               folders={folders}
               spot="drag"
+              actionSpot={lastTour}
               preview
               openMenu={null}
               setOpenMenu={() => undefined}
@@ -329,10 +374,12 @@ function ZipFolderCard({
   todos,
   folders,
   fixed,
+  unsorted,
   collapsed,
   flash,
   spot,
   checkSpot,
+  actionSpot,
   preview,
   openMenu,
   setOpenMenu,
@@ -343,6 +390,7 @@ function ZipFolderCard({
   onMemo,
   onMove,
   onReorderTip,
+  onEditTip,
   onDeleteTip,
   onDropFolder,
   onDropTip,
@@ -352,10 +400,12 @@ function ZipFolderCard({
   todos: UserTodo[];
   folders: ZipFolder[];
   fixed?: boolean;
+  unsorted?: boolean;
   collapsed?: boolean;
   flash?: boolean;
   spot?: string;
   checkSpot?: boolean;
+  actionSpot?: boolean;
   preview?: boolean;
   openMenu: string | null;
   setOpenMenu: (id: string | null) => void;
@@ -366,6 +416,7 @@ function ZipFolderCard({
   onMemo: (id: string, memo: string) => void;
   onMove: (id: string, folderId: string) => void;
   onReorderTip?: (fromId: string, toId: string) => void;
+  onEditTip?: (id: string, text: string) => void;
   onDeleteTip: (id: string) => void;
   onDropFolder?: (fromId: string) => void;
   onDropTip?: (tipId: string) => void;
@@ -376,7 +427,7 @@ function ZipFolderCard({
 
   return (
     <section
-      className={`zip-folder${fixed ? " fixed" : ""}${shut ? " collapsed" : ""}${flash ? " section-flash" : ""}${preview ? " preview" : ""}`}
+      className={`zip-folder${fixed ? " fixed" : ""}${unsorted ? " unsorted" : ""}${shut ? " collapsed" : ""}${flash ? " section-flash" : ""}${preview ? " preview" : ""}`}
       onDragOver={(e) => {
         if (preview) return;
         if (onDropFolder || onDropTip) e.preventDefault();
@@ -466,6 +517,7 @@ function ZipFolderCard({
                 folders={folders}
                 currentId={id}
                 checkSpot={checkSpot && i === 0}
+                actionSpot={actionSpot && i === 0}
                 preview={preview}
                 menuOpen={openMenu === t.id}
                 onMenu={() => setOpenMenu(openMenu === t.id ? null : t.id)}
@@ -477,6 +529,7 @@ function ZipFolderCard({
                   setOpenMenu(null);
                 }}
                 onReorder={onReorderTip}
+                onEdit={onEditTip}
                 onDelete={() => onDeleteTip(t.id)}
               />
             ))
@@ -492,6 +545,7 @@ function TipCard({
   folders,
   currentId,
   checkSpot,
+  actionSpot,
   preview,
   menuOpen,
   onMenu,
@@ -500,12 +554,14 @@ function TipCard({
   onMemo,
   onMove,
   onReorder,
+  onEdit,
   onDelete,
 }: {
   tip: UserTodo;
   folders: ZipFolder[];
   currentId: string;
   checkSpot?: boolean;
+  actionSpot?: boolean;
   preview?: boolean;
   menuOpen: boolean;
   onMenu: () => void;
@@ -514,6 +570,7 @@ function TipCard({
   onMemo: (memo: string) => void;
   onMove: (folderId: string) => void;
   onReorder?: (fromId: string, toId: string) => void;
+  onEdit?: (id: string, text: string) => void;
   onDelete: () => void;
 }) {
   const [memoOpen, setMemoOpen] = useState(Boolean(tip.memo));
@@ -522,6 +579,8 @@ function TipCard({
   const [popping, setPopping] = useState(false);
   const popTimer = useRef<number | null>(null);
   const memoDirty = memo !== savedMemo;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(tip.text);
   const targets = [
     { id: UNSORTED_ID, name: "미분류 TIP" },
     ...folders.map((f) => ({ id: f.id, name: f.name })),
@@ -530,6 +589,10 @@ function TipCard({
   useEffect(() => {
     setMemo(savedMemo);
   }, [savedMemo]);
+
+  useEffect(() => {
+    if (!editing) setDraft(tip.text);
+  }, [tip.text, editing]);
 
   useEffect(() => {
     return () => {
@@ -571,6 +634,7 @@ function TipCard({
         className="zip-grip tip-grip"
         type="button"
         aria-label="TIP 드래그 핸들"
+        data-zip-spot={actionSpot ? "move" : undefined}
         draggable={!preview}
         onDragStart={(e) => {
           if (preview) return;
@@ -594,18 +658,52 @@ function TipCard({
       </div>
       <div className="zip-tip-body">
         <div className="title-row">
-          <div className="title">{tip.text}</div>
+          {editing && onEdit && !preview ? (
+            <input
+              className="zip-tip-edit"
+              value={draft}
+              autoFocus
+              maxLength={TODO_MAX}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={() => {
+                onEdit(tip.id, draft);
+                setEditing(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  onEdit(tip.id, draft);
+                  setEditing(false);
+                }
+                if (e.key === "Escape") setEditing(false);
+              }}
+            />
+          ) : (
+            <div className="title">{tip.text}</div>
+          )}
+          {preview || !onEdit ? null : (
+            <button
+              className="ghost zip-tip-edit-btn"
+              type="button"
+              aria-label="TIP 문구 수정"
+              onClick={() => {
+                setDraft(tip.text);
+                setEditing(true);
+              }}
+            >
+              <IconPencil />
+            </button>
+          )}
           <button
             className={`ghost memo-btn${tip.memo ? " has" : ""}`}
             type="button"
             aria-label="메모"
-            data-zip-spot={checkSpot ? "memo" : undefined}
+            data-zip-spot={actionSpot ? "memo" : undefined}
             onClick={() => setMemoOpen((v) => !v)}
           >
             <IconMemo filled={Boolean(tip.memo)} />
           </button>
           <div className="zip-more">
-            <button className="ghost" type="button" aria-label="이동 메뉴" data-zip-spot={checkSpot ? "move" : undefined} onClick={onMenu}>
+            <button className="ghost" type="button" aria-label="이동 메뉴" onClick={onMenu}>
               <IconDots />
             </button>
             {menuOpen ? (
@@ -689,9 +787,7 @@ function Onboarding({
       if (last) {
         const next: Record<string, DOMRect> = {};
         for (const call of STEP5_CALLS) {
-          let key: string = call.spot;
-          if (key === "drag" && !document.querySelector('[data-zip-spot="drag"]')) key = "add";
-          const el = document.querySelector(`[data-zip-spot="${key}"]`) as HTMLElement | null;
+          const el = document.querySelector(`[data-zip-spot="${call.spot}"]`) as HTMLElement | null;
           if (el) next[call.spot] = el.getBoundingClientRect();
         }
         setBoxes(next);
@@ -714,7 +810,7 @@ function Onboarding({
     window.addEventListener("resize", measure);
     window.addEventListener("scroll", measure, true);
     const first = last
-      ? (document.querySelector('[data-zip-spot="drag"], [data-zip-spot="memo"]') as HTMLElement | null)
+      ? (document.querySelector('[data-zip-spot="drag"], [data-zip-spot="move"]') as HTMLElement | null)
       : (document.querySelector(`[data-zip-spot="${item.spot}"]`) as HTMLElement | null);
     first?.scrollIntoView({ block: "center", behavior: "smooth" });
     return () => {
@@ -761,11 +857,11 @@ function Onboarding({
             {holes.map((h, i) => (
               <rect
                 key={i}
-                x={Math.max(0, h.left - 8)}
-                y={Math.max(0, h.top - 8)}
-                width={h.width + 16}
-                height={h.height + 16}
-                rx="10"
+                x={Math.max(0, h.left - 4)}
+                y={Math.max(0, h.top - 4)}
+                width={h.width + 8}
+                height={h.height + 8}
+                rx="8"
                 fill="black"
               />
             ))}
@@ -778,27 +874,35 @@ function Onboarding({
       </button>
       {last ? (
         <>
-          {STEP5_CALLS.map((call) => {
-            const h = boxes[call.spot];
-            if (!h || !vp.w) return null;
-            const left = Math.min(h.right + 14, vp.w - 240);
-            const top = Math.max(88, h.top - 4);
-            return (
-              <div key={call.spot} className="zip-callout" style={{ top, left }}>
-                {call.label}
-              </div>
-            );
-          })}
-          <div className="zip-card zip-card-last">
-            <div className="zip-dots">
-              {ONBOARD.map((_, i) => (
-                <i key={i} className={i === step ? "on" : undefined} />
-              ))}
-            </div>
-            <button className="btn primary" type="button" onClick={onNext}>
-              시작하기
-            </button>
-          </div>
+          {(() => {
+            const placed: Box[] = holes.map((h) => ({
+              l: h.left - 4,
+              t: h.top - 4,
+              w: h.width + 8,
+              h: h.height + 8,
+            }));
+            return STEP5_CALLS.map((call) => {
+              const h = boxes[call.spot];
+              if (!h || !vp.w) return null;
+              const pos = placeCallout(h, vp, call.side, call.w, call.h, placed);
+              placed.push(pos.box);
+              const cta = "cta" in call && call.cta;
+              return (
+                <div
+                  key={call.spot}
+                  className={`zip-callout${pos.point === "right" ? " point-right" : ""}${cta ? " zip-callout-cta" : ""}`}
+                  style={{ top: pos.top, left: pos.left }}
+                >
+                  {cta ? <p>{call.label}</p> : call.label}
+                  {cta ? (
+                    <button className="btn primary" type="button" onClick={onNext}>
+                      시작하기
+                    </button>
+                  ) : null}
+                </div>
+              );
+            });
+          })()}
         </>
       ) : (
         <div className="zip-card" style={cardStyle}>
