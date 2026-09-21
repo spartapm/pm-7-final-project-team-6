@@ -22,7 +22,6 @@ export default function MeInner() {
   const params = useSearchParams();
   const {
     hydrated,
-    loggedIn,
     name,
     email,
     role,
@@ -49,6 +48,10 @@ export default function MeInner() {
 
   if (!hydrated) return null;
 
+  const displayName = name || "김캐릿";
+  const displayRole = role || "트렌드 담당자";
+  const displayEmail = email || "careet@example.com";
+
   return (
     <SiteShell>
       <div className="me">
@@ -56,19 +59,13 @@ export default function MeInner() {
           <div className="me-head">
             <div>
               <h1>
-                {loggedIn ? `${role} ${name}님` : "일잘 TIP"}
+                {`${displayRole} ${displayName}님`}
               </h1>
-              {loggedIn ? (
-                <>
-                  <div className="sub">{email}</div>
-                  <div className="sub" style={{ marginTop: 8 }}>
-                    <i className="dot" />
-                    이메일 로그인 중
-                  </div>
-                </>
-              ) : (
-                <div className="sub">이 브라우저에만 저장됩니다. 다른 사람과 목록이 섞이지 않아요.</div>
-              )}
+              <div className="sub">{displayEmail}</div>
+              <div className="sub" style={{ marginTop: 8 }}>
+                <i className="dot" />
+                이메일 로그인 중
+              </div>
             </div>
             <div className="stats">
               <button className={`stat${tab === "read" ? " on" : ""}`} type="button" onClick={() => go("read")}>

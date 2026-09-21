@@ -21,7 +21,7 @@ const ONBOARD = [
   },
   {
     spot: "check",
-    title: "완료하면\n자동으로 이동해요",
+    title: "완료하면\n자동으로 변해요",
     body: "체크하면 완료 폴더로 자동 이동해요.\n다시 누르면 원래 있던 폴더로 돌아가요.",
   },
   {
@@ -32,9 +32,19 @@ const ONBOARD = [
   {
     spot: "drag",
     title: "드래그해서 폴더 순서를 바꿀 수 있어요",
-    body: "손잡이를 잡고 폴더 순서를 바꾸고, ⋯ 메뉴로 TIP을 다른 폴더로 옮기거나 메모를 남길 수 있어요.",
+    body: "손잡이를 잡고 폴더를 순서를 바꾸고, ⋯ 메뉴로 TIP을 다른 폴더로 옮기거나 메모를 남길 수 있어요.",
   },
 ] as const;
+
+const TOUR_DEMO_TIP: UserTodo = {
+  id: "tour-demo-tip",
+  text: "오프라인 매장에 냉담 인증샷 포인트 1개 기획하기",
+  done: false,
+  addedAt: 0,
+  sourceTitle: "어른용 키즈카페, '피지컬 재현' 공간이 뜬다",
+  folderId: UNSORTED_ID,
+  memo: "",
+};
 
 export function TipZip() {
   const {
@@ -60,6 +70,9 @@ export function TipZip() {
 
   const allEmpty = todos.length === 0;
   const customIds = folders.map((f) => f.id);
+  const touring = tour !== null;
+  const showTourCheck = touring && tipsIn(todos, UNSORTED_ID).length === 0;
+  const showTourFolder = touring && customIds.length === 0;
 
   const pulse = (id: string) => {
     setFlash(id);
@@ -85,7 +98,7 @@ export function TipZip() {
         <h2>일잘 TIP .ZIP</h2>
       </div>
 
-      {allEmpty ? (
+      {allEmpty && !touring ? (
         <div className="zip-empty">
           <p>아직 담은 일잘TIP이 없어요 🥲 캐릿이 추천해주는 업무 적용 꿀팁을 담아보세요</p>
           <Link href="/">트렌드 꿀팁 보러 가기</Link>
@@ -111,12 +124,13 @@ export function TipZip() {
           <ZipFolderCard
             id={UNSORTED_ID}
             title={folderTitle(UNSORTED_ID, folders)}
-            todos={tipsIn(todos, UNSORTED_ID)}
+            todos={showTourCheck ? [TOUR_DEMO_TIP] : tipsIn(todos, UNSORTED_ID)}
             folders={folders}
             fixed
             flash={flash === UNSORTED_ID}
             spot="unsorted"
             checkSpot
+            preview={showTourCheck}
             openMenu={openMenu}
             setOpenMenu={setOpenMenu}
             onToggleTip={toggleTodo}
@@ -151,6 +165,22 @@ export function TipZip() {
               onDropTip={(tipId) => moveTip(tipId, f.id)}
             />
           ))}
+          {showTourFolder ? (
+            <ZipFolderCard
+              id="tour-demo-folder"
+              title="월별 프로모션"
+              todos={[]}
+              folders={folders}
+              spot="drag"
+              preview
+              openMenu={null}
+              setOpenMenu={() => undefined}
+              onToggleTip={() => undefined}
+              onMemo={() => undefined}
+              onMove={() => undefined}
+              onDeleteTip={() => undefined}
+            />
+          ) : null}
         </div>
 
       <AddFolder
@@ -182,9 +212,9 @@ export function TipZip() {
       )}
 
       {tour !== null ? (
-        <Onboarding
+          <Onboarding
           step={tour}
-          hasCustom={customIds.length > 0}
+          hasCustom={customIds.length > 0 || showTourFolder}
           onNext={() => {
             if (tour >= ONBOARD.length - 1) {
               setOnboardingDone(true);
@@ -291,6 +321,7 @@ function ZipFolderCard({
   flash,
   spot,
   checkSpot,
+  preview,
   openMenu,
   setOpenMenu,
   onToggle,
@@ -312,6 +343,7 @@ function ZipFolderCard({
   flash?: boolean;
   spot?: string;
   checkSpot?: boolean;
+  preview?: boolean;
   openMenu: string | null;
   setOpenMenu: (id: string | null) => void;
   onToggle?: () => void;
@@ -330,12 +362,13 @@ function ZipFolderCard({
 
   return (
     <section
-      className={`zip-folder${fixed ? " fixed" : ""}${shut ? " collapsed" : ""}${flash ? " section-flash" : ""}`}
-      data-zip-spot={spot && spot !== "drag" ? spot : undefined}
+      className={`zip-folder${fixed ? " fixed" : ""}${shut ? " collapsed" : ""}${flash ? " section-flash" : ""}${preview ? " preview" : ""}`}
       onDragOver={(e) => {
+        if (preview) return;
         if (onDropFolder || onDropTip) e.preventDefault();
       }}
       onDrop={(e) => {
+        if (preview) return;
         e.preventDefault();
         const folderFrom = e.dataTransfer.getData("zip-folder");
         const tipFrom = e.dataTransfer.getData("zip-tip");
@@ -344,22 +377,15 @@ function ZipFolderCard({
       }}
     >
       <header className="zip-folder-h">
-        {fixed ? (
-          id === DONE_ID ? (
-            <span className="zip-pin" aria-label="고정">
-              <IconPin />
-            </span>
-          ) : (
-            <span className="zip-pin spacer" aria-hidden />
-          )
-        ) : (
+        {fixed ? null : (
           <button
             className="zip-grip"
             type="button"
             aria-label="드래그 핸들"
             data-zip-spot={spot === "drag" ? "drag" : undefined}
-            draggable
+            draggable={!preview}
             onDragStart={(e) => {
+              if (preview) return;
               e.dataTransfer.setData("zip-folder", id);
               e.dataTransfer.effectAllowed = "move";
             }}
@@ -367,14 +393,26 @@ function ZipFolderCard({
             <IconGrip />
           </button>
         )}
-        <span className="zip-folder-ico" aria-hidden>
-          <IconFolderMini />
-        </span>
-        <button className="zip-fold-toggle" type="button" onClick={onToggle} disabled={fixed}>
-          <span className={`chev${shut ? "" : " open"}`}>▾</span>
-          <strong>{title}</strong>
-          <em>{todos.length}</em>
-        </button>
+        <div className="zip-spot" data-zip-spot={spot && spot !== "drag" ? spot : undefined}>
+          {fixed ? (
+            id === DONE_ID ? (
+              <span className="zip-pin" aria-label="고정">
+                <IconPin />
+              </span>
+            ) : (
+              <span className="zip-pin spacer" aria-hidden />
+            )
+          ) : null}
+          <span className="zip-folder-ico" aria-hidden>
+            <IconFolderMini />
+          </span>
+          <button className="zip-fold-toggle" type="button" onClick={onToggle} disabled={fixed || preview}>
+            <span className={`chev${shut ? "" : " open"}`}>▾</span>
+            <strong>{title}</strong>
+            <em>{todos.length}</em>
+          </button>
+        </div>
+        <span className="zip-h-space" aria-hidden />
         {fixed || !onRename ? null : editing ? (
           <input
             className="zip-rename"
@@ -424,6 +462,7 @@ function ZipFolderCard({
                 folders={folders}
                 currentId={id}
                 checkSpot={checkSpot && i === 0}
+                preview={preview}
                 menuOpen={openMenu === t.id}
                 onMenu={() => setOpenMenu(openMenu === t.id ? null : t.id)}
                 onCloseMenu={() => setOpenMenu(null)}
@@ -448,6 +487,7 @@ function TipCard({
   folders,
   currentId,
   checkSpot,
+  preview,
   menuOpen,
   onMenu,
   onCloseMenu,
@@ -460,6 +500,7 @@ function TipCard({
   folders: ZipFolder[];
   currentId: string;
   checkSpot?: boolean;
+  preview?: boolean;
   menuOpen: boolean;
   onMenu: () => void;
   onCloseMenu: () => void;
@@ -481,8 +522,9 @@ function TipCard({
         className="zip-grip tip-grip"
         type="button"
         aria-label="TIP 드래그 핸들"
-        draggable
+        draggable={!preview}
         onDragStart={(e) => {
+          if (preview) return;
           e.dataTransfer.setData("zip-tip", tip.id);
           e.dataTransfer.effectAllowed = "move";
         }}
@@ -494,7 +536,9 @@ function TipCard({
         type="button"
         aria-label="완료"
         data-zip-spot={checkSpot ? "check" : undefined}
-        onClick={onToggle}
+        onClick={() => {
+          if (!preview) onToggle();
+        }}
       >
         {tip.done ? <IconCheck /> : null}
       </button>
@@ -593,6 +637,9 @@ function Onboarding({
       if (nextSpot === "check" && !document.querySelector('[data-zip-spot="check"]')) {
         nextSpot = "unsorted";
       }
+      if (nextSpot === "drag" && !document.querySelector('[data-zip-spot="drag"]')) {
+        nextSpot = "add";
+      }
       const el = document.querySelector(`[data-zip-spot="${nextSpot}"]`) as HTMLElement | null;
       if (!el) {
         setBox(null);
@@ -618,17 +665,13 @@ function Onboarding({
   const cardStyle = useMemo(() => {
     if (!box || !vp.w) return { top: "28%", left: "50%", transform: "translateX(-50%)" } as const;
     const cardW = 320;
-    const cardH = 200;
-    const pad = 16;
-    let left = box.right + pad;
-    let top = box.top - 8;
-    if (left + cardW > vp.w - 24) {
-      left = Math.max(24, box.left - cardW - pad);
-    }
-    if (left < 24) left = 24;
-    if (left + cardW > vp.w - 24) left = Math.max(24, vp.w - cardW - 24);
-    if (top + cardH > vp.h - 24) top = Math.max(24, box.bottom - cardH);
-    if (top < 24) top = 24;
+    const cardH = 210;
+    const gap = 16;
+    const small = box.width < 140;
+    let left = small ? box.right + gap : box.left + Math.min(box.width + gap, 184);
+    let top = small ? box.top + box.height / 2 - 48 : box.top - 12;
+    left = Math.min(Math.max(16, left), Math.max(16, vp.w - cardW - 16));
+    top = Math.min(Math.max(88, top), Math.max(88, vp.h - cardH - 16));
     return { top, left, transform: "none" } as const;
   }, [box, vp]);
 

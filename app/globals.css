@@ -1609,7 +1609,18 @@ button { cursor: pointer; }
   border-radius: 14px;
   min-height: 48px;
   overflow: visible;
+  scroll-margin-top: 128px;
 }
+.zip-spot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: none;
+}
+.zip-spot .zip-fold-toggle { flex: none; }
+.zip-h-space { flex: 1; min-width: 8px; }
+.zip-add { scroll-margin-top: 128px; }
 .zip-folder.section-flash { animation: section-flash 0.9s ease; }
 @keyframes section-flash {
   0%, 100% { box-shadow: none; }
