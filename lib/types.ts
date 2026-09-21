@@ -70,11 +70,15 @@ export type ZipFolder = {
 export type ZipState = {
   folders: ZipFolder[];
   onboardingDone: boolean;
+  doneCollapsed: boolean;
+  unsortedCollapsed: boolean;
 };
 
 export const defaultZip = (): ZipState => ({
   folders: [],
   onboardingDone: false,
+  doneCollapsed: false,
+  unsortedCollapsed: false,
 });
 
 export function mergeZip(input?: Partial<ZipState> | null): ZipState {
@@ -86,6 +90,8 @@ export function mergeZip(input?: Partial<ZipState> | null): ZipState {
       collapsed: Boolean(f.collapsed),
     })) : base.folders,
     onboardingDone: Boolean(input?.onboardingDone),
+    doneCollapsed: Boolean(input?.doneCollapsed),
+    unsortedCollapsed: Boolean(input?.unsortedCollapsed),
   };
 }
 

@@ -112,10 +112,12 @@ export function TipZip() {
             todos={tipsIn(todos, DONE_ID)}
             folders={folders}
             fixed
+            collapsed={!touring && prefs.zip.doneCollapsed}
             flash={flash === DONE_ID}
             spot="done"
             openMenu={openMenu}
             setOpenMenu={setOpenMenu}
+            onToggle={() => toggleZipFolder(DONE_ID)}
             onToggleTip={toggleTodo}
             onMemo={setTipMemo}
             onMove={moveTip}
@@ -127,12 +129,14 @@ export function TipZip() {
             todos={showTourCheck ? [TOUR_DEMO_TIP] : tipsIn(todos, UNSORTED_ID)}
             folders={folders}
             fixed
+            collapsed={!touring && prefs.zip.unsortedCollapsed}
             flash={flash === UNSORTED_ID}
             spot="unsorted"
             checkSpot
             preview={showTourCheck}
             openMenu={openMenu}
             setOpenMenu={setOpenMenu}
+            onToggle={() => toggleZipFolder(UNSORTED_ID)}
             onToggleTip={toggleTodo}
             onMemo={setTipMemo}
             onMove={moveTip}
@@ -358,7 +362,7 @@ function ZipFolderCard({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(title);
-  const shut = Boolean(collapsed) && !fixed;
+  const shut = Boolean(collapsed) && !preview;
 
   return (
     <section
@@ -406,7 +410,7 @@ function ZipFolderCard({
           <span className="zip-folder-ico" aria-hidden>
             <IconFolderMini />
           </span>
-          <button className="zip-fold-toggle" type="button" onClick={onToggle} disabled={fixed || preview}>
+          <button className="zip-fold-toggle" type="button" onClick={onToggle} disabled={preview || !onToggle}>
             <span className={`chev${shut ? "" : " open"}`}>▾</span>
             <strong>{title}</strong>
             <em>{todos.length}</em>

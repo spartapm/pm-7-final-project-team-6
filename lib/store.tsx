@@ -655,16 +655,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const toggleZipFolder = useCallback((id: string) => {
-    setState((s) => ({
-      ...s,
-      prefs: {
-        ...s.prefs,
-        zip: {
-          ...s.prefs.zip,
-          folders: s.prefs.zip.folders.map((f) => (f.id === id ? { ...f, collapsed: !f.collapsed } : f)),
+    setState((s) => {
+      if (id === DONE_ID) {
+        return {
+          ...s,
+          prefs: {
+            ...s.prefs,
+            zip: { ...s.prefs.zip, doneCollapsed: !s.prefs.zip.doneCollapsed },
+          },
+        };
+      }
+      if (id === UNSORTED_ID) {
+        return {
+          ...s,
+          prefs: {
+            ...s.prefs,
+            zip: { ...s.prefs.zip, unsortedCollapsed: !s.prefs.zip.unsortedCollapsed },
+          },
+        };
+      }
+      return {
+        ...s,
+        prefs: {
+          ...s.prefs,
+          zip: {
+            ...s.prefs.zip,
+            folders: s.prefs.zip.folders.map((f) => (f.id === id ? { ...f, collapsed: !f.collapsed } : f)),
+          },
         },
-      },
-    }));
+      };
+    });
   }, []);
 
   const reorderZipFolders = useCallback((fromId: string, toId: string) => {

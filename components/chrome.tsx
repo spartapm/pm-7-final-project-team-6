@@ -117,7 +117,7 @@ function SubNavInner({ onHero = false }: { onHero?: boolean }) {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="검색어를 입력해 보세요"
+            placeholder="검색어를 입력해주세요"
             aria-label="검색"
           />
         </form>
