@@ -38,38 +38,42 @@ const ONBOARD = [
 ] as const;
 
 const STEP5_CALLS = [
-  { spot: "drag", label: "드래그 해서 폴더 순서를 바꿀 수 있어요", side: "right" as const, w: 228, h: 52 },
-  { spot: "move", label: "TIP을 다른 폴더로 옮길 수 있어요", side: "right" as const, w: 228, h: 52 },
-  { spot: "memo", label: "내 생각을 메모로 남겨보세요", side: "left" as const, w: 240, h: 108, cta: true },
+  { spot: "drag", label: "드래그 해서 폴더 순서를 바꿀 수 있어요", side: "above" as const, w: 228, h: 40 },
+  { spot: "move", label: "TIP을 다른 폴더로 옮길 수 있어요", side: "right" as const, w: 228, h: 40 },
+  { spot: "memo", label: "내 생각을 메모로 남겨보세요", side: "left" as const, w: 240, h: 100, cta: true },
 ] as const;
 
 type Box = { l: number; t: number; w: number; h: number };
 
-function boxesOverlap(a: Box, b: Box, gap = 10) {
+function boxesOverlap(a: Box, b: Box, gap = 8) {
   return a.l < b.l + b.w + gap && a.l + a.w + gap > b.l && a.t < b.t + b.h + gap && a.t + a.h + gap > b.t;
 }
 
 function placeCallout(
   target: DOMRect,
   vp: { w: number; h: number },
-  side: "left" | "right",
+  side: "left" | "right" | "above",
   w: number,
   ht: number,
   blocked: Box[],
 ) {
   const pad = 16;
-  let left = side === "right" ? target.right + 14 : target.left - 14 - w;
+  let left = side === "left" ? target.left - 14 - w : target.right + 14;
+  let top = side === "above" ? target.top - ht - 10 : target.top - 4;
   if (left < pad) left = target.right + 14;
   if (left + w > vp.w - pad) left = Math.max(pad, target.left - 14 - w);
   left = Math.min(Math.max(pad, left), Math.max(pad, vp.w - w - pad));
-  let top = Math.max(88, Math.min(target.top - 6, vp.h - ht - pad));
+  top = Math.min(Math.max(88, top), Math.max(88, vp.h - ht - pad));
   const box: Box = { l: left, t: top, w, h: ht };
-  for (let i = 0; i < 14; i += 1) {
+  for (let i = 0; i < 16; i += 1) {
     const hit = blocked.find((b) => boxesOverlap(box, b));
     if (!hit) break;
-    const below = hit.t + hit.h + 12;
-    if (below + ht <= vp.h - pad) box.t = below;
-    else box.t = Math.max(88, hit.t - ht - 12);
+    const below = hit.t + hit.h + 10;
+    const above = hit.t - ht - 10;
+    if (side === "above" && above >= 88) box.t = above;
+    else if (below + ht <= vp.h - pad) box.t = below;
+    else if (above >= 88) box.t = above;
+    else box.l = Math.min(vp.w - w - pad, hit.l + hit.w + 10);
   }
   const point: "left" | "right" = box.l + w / 2 < target.left + target.width / 2 ? "right" : "left";
   return { top: box.t, left: box.l, point, box };
@@ -136,7 +140,7 @@ export function TipZip() {
   };
 
   return (
-    <div className="zip-board">
+    <div className={`zip-board${lastTour ? " zip-board-tour-last" : ""}`}>
       <div className="zip-title-row" data-zip-spot="title">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img className="zip-tab-img" src="/zip-folder-tab.png" width={168} height={82} alt="일잘 TIP .ZIP" />
@@ -807,14 +811,17 @@ function Onboarding({
     };
     measure();
     const later = window.setTimeout(measure, 320);
+    const later2 = last ? window.setTimeout(measure, 700) : 0;
     window.addEventListener("resize", measure);
     window.addEventListener("scroll", measure, true);
     const first = last
-      ? (document.querySelector('[data-zip-spot="drag"], [data-zip-spot="move"]') as HTMLElement | null)
+      ? (document.querySelector('[data-zip-spot="drag"]') as HTMLElement | null)
       : (document.querySelector(`[data-zip-spot="${item.spot}"]`) as HTMLElement | null);
-    first?.scrollIntoView({ block: "center", behavior: "smooth" });
+    const scrollEl = last ? (first?.closest(".zip-folder") as HTMLElement | null) || first : first;
+    scrollEl?.scrollIntoView({ block: "center", behavior: "instant" });
     return () => {
       window.clearTimeout(later);
+      if (later2) window.clearTimeout(later2);
       window.removeEventListener("resize", measure);
       window.removeEventListener("scroll", measure, true);
     };

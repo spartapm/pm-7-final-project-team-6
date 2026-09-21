@@ -1577,6 +1577,7 @@ button { cursor: pointer; }
 
 /* ——— 일잘 TIP.ZIP ——— */
 .zip-board { border-top: 1px solid var(--gray-line); padding-top: 28px; }
+.zip-board-tour-last { padding-bottom: 360px; }
 .zip-title-row { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
 .zip-title-row h2 {
   position: absolute;
