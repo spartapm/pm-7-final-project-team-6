@@ -1623,7 +1623,7 @@ button { cursor: pointer; }
   min-width: 0;
   flex: none;
 }
-.zip-spot .zip-fold-toggle { flex: none; }
+.zip-spot .zip-fold-toggle { flex: 1; min-width: 0; }
 .zip-h-space { flex: 1; min-width: 8px; }
 .zip-add { scroll-margin-top: 128px; }
 .zip-folder.section-flash { animation: section-flash 0.7s ease; }
@@ -1658,8 +1658,12 @@ button { cursor: pointer; }
 .zip-folder-ico { color: #6b7280; display: grid; place-items: center; flex: none; }
 .zip-fold-toggle {
   flex: 1; display: flex; align-items: center; gap: 8px;
+  min-width: 0;
+}
+.zip-fold-main {
+  display: flex; align-items: center; gap: 8px;
   border: 0; background: transparent; text-align: left; padding: 0;
-  font: inherit; min-width: 0;
+  font: inherit; min-width: 0; max-width: 100%;
 }
 .zip-fold-toggle .chev { color: #9ca3af; transform: rotate(-90deg); transition: transform 0.2s; flex: none; }
 .zip-fold-toggle .chev.open { transform: none; }
@@ -1667,6 +1671,7 @@ button { cursor: pointer; }
 .zip-fold-toggle em {
   font-style: normal; color: #6b7280; font-size: 12px; font-weight: 600;
   background: #e5e7eb; border-radius: 99px; padding: 1px 8px;
+  flex: none;
 }
 .zip-folder.fixed .zip-fold-toggle strong,
 .zip-folder.fixed .zip-fold-toggle em,
@@ -1692,6 +1697,36 @@ button { cursor: pointer; }
 }
 .zip-rename {
   width: 180px; border: 1px solid #111; border-radius: 8px; padding: 6px 8px; font-size: 14px;
+}
+.zip-rename-inline {
+  flex: 1;
+  min-width: 72px;
+  max-width: 280px;
+  border: 0;
+  border-bottom: 1px solid #111;
+  border-radius: 0;
+  padding: 0 0 1px;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  color: #111;
+  outline: none;
+  letter-spacing: -0.02em;
+}
+.zip-memo-spot {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 8px;
+}
+.zip-board-tour-last .zip-memo-spot[data-zip-spot="memo"] {
+  width: 44px;
+  height: 44px;
+  background: #fff;
+  box-shadow: 0 0 0 3px #fff;
 }
 .zip-tips { padding: 0 8px 12px; background: #fff; border-radius: 0 0 13px 13px; }
 .zip-folder.fixed .zip-tips { background: #efefee; }
@@ -1849,7 +1884,8 @@ button { cursor: pointer; }
   content: "";
   position: absolute;
   left: -7px;
-  top: 12px;
+  top: 50%;
+  margin-top: -7px;
   border-top: 7px solid transparent;
   border-bottom: 7px solid transparent;
   border-right: 7px solid #fff;

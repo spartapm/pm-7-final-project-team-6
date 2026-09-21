@@ -38,9 +38,9 @@ const ONBOARD = [
 ] as const;
 
 const STEP5_CALLS = [
-  { spot: "drag", label: "드래그 해서 폴더 순서를 바꿀 수 있어요", side: "above" as const, w: 228, h: 40 },
-  { spot: "move", label: "TIP을 다른 폴더로 옮길 수 있어요", side: "right" as const, w: 228, h: 40 },
-  { spot: "memo", label: "내 생각을 메모로 남겨보세요", side: "left" as const, w: 240, h: 100, cta: true },
+  { spot: "drag", label: "드래그 해서 폴더 순서를 바꿀 수 있어요", side: "left" as const, w: 228, h: 40, hole: 8 },
+  { spot: "move", label: "TIP을 다른 폴더로 옮길 수 있어요", side: "right" as const, w: 228, h: 40, hole: 8 },
+  { spot: "memo", label: "내 생각을 메모로 남겨보세요", side: "left" as const, w: 240, h: 100, cta: true, hole: 18 },
 ] as const;
 
 type Box = { l: number; t: number; w: number; h: number };
@@ -59,19 +59,18 @@ function placeCallout(
 ) {
   const pad = 16;
   let left = side === "left" ? target.left - 14 - w : target.right + 14;
-  let top = side === "above" ? target.top - ht - 10 : target.top - 4;
+  let top = target.top + (target.height - ht) / 2;
   if (left < pad) left = target.right + 14;
   if (left + w > vp.w - pad) left = Math.max(pad, target.left - 14 - w);
   left = Math.min(Math.max(pad, left), Math.max(pad, vp.w - w - pad));
   top = Math.min(Math.max(88, top), Math.max(88, vp.h - ht - pad));
   const box: Box = { l: left, t: top, w, h: ht };
   for (let i = 0; i < 16; i += 1) {
-    const hit = blocked.find((b) => boxesOverlap(box, b));
+    const hit = blocked.find((b) => boxesOverlap(box, b, 6));
     if (!hit) break;
-    const below = hit.t + hit.h + 10;
-    const above = hit.t - ht - 10;
-    if (side === "above" && above >= 88) box.t = above;
-    else if (below + ht <= vp.h - pad) box.t = below;
+    const below = hit.t + hit.h + 8;
+    const above = hit.t - ht - 8;
+    if (below + ht <= vp.h - pad && Math.abs(below - top) <= Math.abs(above - top)) box.t = below;
     else if (above >= 88) box.t = above;
     else box.l = Math.min(vp.w - w - pad, hit.l + hit.w + 10);
   }
@@ -466,30 +465,42 @@ function ZipFolderCard({
           <span className="zip-folder-ico" aria-hidden>
             <IconFolderMini />
           </span>
-          <button className="zip-fold-toggle" type="button" onClick={onToggle} disabled={preview || !onToggle}>
-            <span className={`chev${shut ? "" : " open"}`}>▾</span>
-            <strong>{title}</strong>
+          <div className="zip-fold-toggle">
+            <button
+              className="zip-fold-main"
+              type="button"
+              onClick={onToggle}
+              disabled={preview || !onToggle || editing}
+            >
+              <span className={`chev${shut ? "" : " open"}`}>▾</span>
+              {editing ? null : <strong>{title}</strong>}
+            </button>
+            {fixed || !onRename || !editing ? null : (
+              <input
+                className="zip-rename-inline"
+                value={draft}
+                autoFocus
+                aria-label="폴더 이름"
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={() => {
+                  onRename(draft);
+                  setEditing(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    onRename(draft);
+                    setEditing(false);
+                  }
+                  if (e.key === "Escape") {
+                    setDraft(title);
+                    setEditing(false);
+                  }
+                }}
+              />
+            )}
             <em>{todos.length}</em>
-          </button>
-          {fixed || !onRename ? null : editing ? (
-          <input
-            className="zip-rename"
-            value={draft}
-            autoFocus
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={() => {
-              onRename(draft);
-              setEditing(false);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                onRename(draft);
-                setEditing(false);
-              }
-              if (e.key === "Escape") setEditing(false);
-            }}
-          />
-        ) : (
+          </div>
+          {fixed || !onRename || editing ? null : (
           <button
             className="ghost"
             type="button"
@@ -697,15 +708,16 @@ function TipCard({
               <IconPencil />
             </button>
           )}
-          <button
-            className={`ghost memo-btn${tip.memo ? " has" : ""}`}
-            type="button"
-            aria-label="메모"
-            data-zip-spot={actionSpot ? "memo" : undefined}
-            onClick={() => setMemoOpen((v) => !v)}
-          >
-            <IconMemo filled={Boolean(tip.memo)} />
-          </button>
+          <span className="zip-memo-spot" data-zip-spot={actionSpot ? "memo" : undefined}>
+            <button
+              className={`ghost memo-btn${tip.memo ? " has" : ""}`}
+              type="button"
+              aria-label="메모"
+              onClick={() => setMemoOpen((v) => !v)}
+            >
+              <IconMemo filled={Boolean(tip.memo)} />
+            </button>
+          </span>
           <div className="zip-more">
             <button className="ghost" type="button" aria-label="이동 메뉴" onClick={onMenu}>
               <IconDots />
@@ -850,7 +862,24 @@ function Onboarding({
   }, [box, vp]);
 
   const holes = last
-    ? STEP5_CALLS.map((call) => boxes[call.spot]).filter((h): h is DOMRect => Boolean(h))
+    ? STEP5_CALLS.flatMap((call) => {
+        const h = boxes[call.spot];
+        if (!h) return [];
+        const pad = call.hole;
+        const min = call.spot === "memo" ? 48 : 0;
+        const w = Math.max(h.width + pad * 2, min);
+        const ht = Math.max(h.height + pad * 2, min);
+        return [
+          {
+            left: h.left + h.width / 2 - w / 2,
+            top: h.top + h.height / 2 - ht / 2,
+            width: w,
+            height: ht,
+            right: h.left + h.width / 2 + w / 2,
+            bottom: h.top + h.height / 2 + ht / 2,
+          } as DOMRect,
+        ];
+      })
     : box
       ? [box]
       : [];
@@ -882,12 +911,7 @@ function Onboarding({
       {last ? (
         <>
           {(() => {
-            const placed: Box[] = holes.map((h) => ({
-              l: h.left - 4,
-              t: h.top - 4,
-              w: h.width + 8,
-              h: h.height + 8,
-            }));
+            const placed: Box[] = [];
             return STEP5_CALLS.map((call) => {
               const h = boxes[call.spot];
               if (!h || !vp.w) return null;
