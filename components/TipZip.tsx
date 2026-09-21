@@ -689,7 +689,7 @@ function Onboarding({
       if (last) {
         const next: Record<string, DOMRect> = {};
         for (const call of STEP5_CALLS) {
-          let key = call.spot;
+          let key: string = call.spot;
           if (key === "drag" && !document.querySelector('[data-zip-spot="drag"]')) key = "add";
           const el = document.querySelector(`[data-zip-spot="${key}"]`) as HTMLElement | null;
           if (el) next[call.spot] = el.getBoundingClientRect();
