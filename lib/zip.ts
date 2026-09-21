@@ -9,8 +9,6 @@ export const FOLDER_SUGGESTIONS = [
   "시즌·프로모션 캘린더",
   "캠페인 기획 아이디어",
   "경쟁사 벤치마킹",
-  "카피라이팅 레퍼런스",
-  "브랜드 콜라보 아이디어",
 ] as const;
 
 export function migrateTodo(t: UserTodo): UserTodo {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { IconCheck, IconClose, IconDots, IconEdit, IconFolderMini, IconGrip, IconHelp, IconMemo, IconPin } from "./icons";
+import { IconCheck, IconClose, IconDots, IconEdit, IconFolderMini, IconGrip, IconHelp, IconMemo } from "./icons";
 import { formatDotDate } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import type { UserTodo, ZipFolder } from "@/lib/types";
@@ -21,8 +21,8 @@ const ONBOARD = [
   },
   {
     spot: "check",
-    title: "완료하면\n자동으로 변해요",
-    body: "체크하면 완료 폴더로 자동 이동해요.\n다시 누르면 원래 있던 폴더로 돌아가요.",
+    title: "업무에 적용 완료한 TIP을 체크해보세요",
+    body: "‘업무에 적용 완료된 TIP 폴더’ 로 이동해요. 다시 누르면 원래 있던 폴더로 돌아가요.",
   },
   {
     spot: "add",
@@ -32,8 +32,14 @@ const ONBOARD = [
   {
     spot: "drag",
     title: "드래그해서 폴더 순서를 바꿀 수 있어요",
-    body: "손잡이를 잡고 폴더를 순서를 바꾸고, ⋯ 메뉴로 TIP을 다른 폴더로 옮기거나 메모를 남길 수 있어요.",
+    body: "",
   },
+] as const;
+
+const STEP5_CALLS = [
+  { spot: "drag", label: "드래그 해서 폴더 순서를 바꿀 수 있어요" },
+  { spot: "move", label: "TIP을 다른 폴더로 옮길 수 있어요" },
+  { spot: "memo", label: "내 생각을 메모로 남겨보세요" },
 ] as const;
 
 const TOUR_DEMO_TIP: UserTodo = {
@@ -54,6 +60,7 @@ export function TipZip() {
     deleteTodo,
     setTipMemo,
     moveTip,
+    reorderTips,
     addZipFolder,
     renameZipFolder,
     deleteZipFolder,
@@ -121,6 +128,7 @@ export function TipZip() {
             onToggleTip={toggleTodo}
             onMemo={setTipMemo}
             onMove={moveTip}
+            onReorderTip={reorderTips}
             onDeleteTip={deleteTodo}
           />
           <ZipFolderCard
@@ -140,6 +148,7 @@ export function TipZip() {
             onToggleTip={toggleTodo}
             onMemo={setTipMemo}
             onMove={moveTip}
+            onReorderTip={reorderTips}
             onDeleteTip={deleteTodo}
             onDropTip={(tipId) => moveTip(tipId, UNSORTED_ID)}
           />
@@ -164,6 +173,7 @@ export function TipZip() {
               onToggleTip={toggleTodo}
               onMemo={setTipMemo}
               onMove={moveTip}
+              onReorderTip={reorderTips}
               onDeleteTip={deleteTodo}
               onDropFolder={(fromId) => reorderZipFolders(fromId, f.id)}
               onDropTip={(tipId) => moveTip(tipId, f.id)}
@@ -182,6 +192,7 @@ export function TipZip() {
               onToggleTip={() => undefined}
               onMemo={() => undefined}
               onMove={() => undefined}
+              onReorderTip={() => undefined}
               onDeleteTip={() => undefined}
             />
           ) : null}
@@ -288,9 +299,6 @@ function AddFolder({
         }}
       />
       <div className="zip-suggest">
-        <button type="button" className="direct" onClick={() => name.trim() && onSubmit(name)}>
-          직접 입력하기
-        </button>
         {filtered.map((s) => (
           <button key={s} type="button" onClick={() => onSubmit(s)}>
             <span>추천</span>
@@ -334,6 +342,7 @@ function ZipFolderCard({
   onToggleTip,
   onMemo,
   onMove,
+  onReorderTip,
   onDeleteTip,
   onDropFolder,
   onDropTip,
@@ -356,6 +365,7 @@ function ZipFolderCard({
   onToggleTip: (id: string) => void;
   onMemo: (id: string, memo: string) => void;
   onMove: (id: string, folderId: string) => void;
+  onReorderTip?: (fromId: string, toId: string) => void;
   onDeleteTip: (id: string) => void;
   onDropFolder?: (fromId: string) => void;
   onDropTip?: (tipId: string) => void;
@@ -398,15 +408,6 @@ function ZipFolderCard({
           </button>
         )}
         <div className="zip-spot" data-zip-spot={spot && spot !== "drag" ? spot : undefined}>
-          {fixed ? (
-            id === DONE_ID ? (
-              <span className="zip-pin" aria-label="고정">
-                <IconPin />
-              </span>
-            ) : (
-              <span className="zip-pin spacer" aria-hidden />
-            )
-          ) : null}
           <span className="zip-folder-ico" aria-hidden>
             <IconFolderMini />
           </span>
@@ -415,9 +416,7 @@ function ZipFolderCard({
             <strong>{title}</strong>
             <em>{todos.length}</em>
           </button>
-        </div>
-        <span className="zip-h-space" aria-hidden />
-        {fixed || !onRename ? null : editing ? (
+          {fixed || !onRename ? null : editing ? (
           <input
             className="zip-rename"
             value={draft}
@@ -453,6 +452,7 @@ function ZipFolderCard({
             <IconClose />
           </button>
         )}
+        </div>
       </header>
       {shut ? null : (
         <div className="zip-tips">
@@ -476,6 +476,7 @@ function ZipFolderCard({
                   onMove(t.id, folderId);
                   setOpenMenu(null);
                 }}
+                onReorder={onReorderTip}
                 onDelete={() => onDeleteTip(t.id)}
               />
             ))
@@ -498,6 +499,7 @@ function TipCard({
   onToggle,
   onMemo,
   onMove,
+  onReorder,
   onDelete,
 }: {
   tip: UserTodo;
@@ -511,16 +513,23 @@ function TipCard({
   onToggle: () => void;
   onMemo: (memo: string) => void;
   onMove: (folderId: string) => void;
+  onReorder?: (fromId: string, toId: string) => void;
   onDelete: () => void;
 }) {
   const [memoOpen, setMemoOpen] = useState(Boolean(tip.memo));
-  const [memo, setMemo] = useState(tip.memo ?? "");
+  const savedMemo = tip.memo ?? "";
+  const [memo, setMemo] = useState(savedMemo);
   const [popping, setPopping] = useState(false);
   const popTimer = useRef<number | null>(null);
+  const memoDirty = memo !== savedMemo;
   const targets = [
     { id: UNSORTED_ID, name: "미분류 TIP" },
     ...folders.map((f) => ({ id: f.id, name: f.name })),
   ].filter((f) => f.id !== currentId && f.id !== DONE_ID);
+
+  useEffect(() => {
+    setMemo(savedMemo);
+  }, [savedMemo]);
 
   useEffect(() => {
     return () => {
@@ -542,7 +551,22 @@ function TipCard({
   };
 
   return (
-    <article className={`zip-tip${tip.done || popping ? " done" : ""}`}>
+    <article
+      className={`zip-tip${tip.done || popping ? " done" : ""}`}
+      onDragOver={(e) => {
+        if (preview || !onReorder) return;
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onDrop={(e) => {
+        if (preview || !onReorder) return;
+        const from = e.dataTransfer.getData("zip-tip");
+        if (!from) return;
+        e.preventDefault();
+        e.stopPropagation();
+        onReorder(from, tip.id);
+      }}
+    >
       <button
         className="zip-grip tip-grip"
         type="button"
@@ -575,12 +599,13 @@ function TipCard({
             className={`ghost memo-btn${tip.memo ? " has" : ""}`}
             type="button"
             aria-label="메모"
+            data-zip-spot={checkSpot ? "memo" : undefined}
             onClick={() => setMemoOpen((v) => !v)}
           >
             <IconMemo filled={Boolean(tip.memo)} />
           </button>
           <div className="zip-more">
-            <button className="ghost" type="button" aria-label="이동 메뉴" onClick={onMenu}>
+            <button className="ghost" type="button" aria-label="이동 메뉴" data-zip-spot={checkSpot ? "move" : undefined} onClick={onMenu}>
               <IconDots />
             </button>
             {menuOpen ? (
@@ -623,15 +648,17 @@ function TipCard({
               value={memo}
               placeholder="나만의 메모를 여기에 남겨요..."
               onChange={(e) => setMemo(e.target.value)}
-              onBlur={() => onMemo(memo)}
             />
-            <button
-              className="zip-memo-save"
-              type="button"
-              onClick={() => onMemo(memo)}
-            >
-              완료
-            </button>
+            {memoDirty ? (
+              <button
+                className="zip-memo-save"
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => onMemo(memo)}
+              >
+                완료
+              </button>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -653,12 +680,25 @@ function Onboarding({
   const item = ONBOARD[step];
   const last = step === ONBOARD.length - 1;
   const [box, setBox] = useState<DOMRect | null>(null);
+  const [boxes, setBoxes] = useState<Record<string, DOMRect>>({});
   const [vp, setVp] = useState({ w: 0, h: 0 });
 
   useEffect(() => {
-    const spot = item.spot === "drag" && !hasCustom ? "add" : item.spot;
     const measure = () => {
       setVp({ w: window.innerWidth, h: window.innerHeight });
+      if (last) {
+        const next: Record<string, DOMRect> = {};
+        for (const call of STEP5_CALLS) {
+          let key = call.spot;
+          if (key === "drag" && !document.querySelector('[data-zip-spot="drag"]')) key = "add";
+          const el = document.querySelector(`[data-zip-spot="${key}"]`) as HTMLElement | null;
+          if (el) next[call.spot] = el.getBoundingClientRect();
+        }
+        setBoxes(next);
+        setBox(null);
+        return;
+      }
+      const spot = item.spot === "drag" && !hasCustom ? "add" : item.spot;
       let nextSpot = spot;
       if (nextSpot === "check" && !document.querySelector('[data-zip-spot="check"]')) {
         nextSpot = "unsorted";
@@ -667,26 +707,22 @@ function Onboarding({
         nextSpot = "add";
       }
       const el = document.querySelector(`[data-zip-spot="${nextSpot}"]`) as HTMLElement | null;
-      if (!el) {
-        setBox(null);
-        return;
-      }
-      setBox(el.getBoundingClientRect());
+      setBox(el ? el.getBoundingClientRect() : null);
     };
     measure();
-    const scrollEl = document.querySelector(
-      `[data-zip-spot="${spot === "check" && !document.querySelector('[data-zip-spot="check"]') ? "unsorted" : spot}"]`,
-    ) as HTMLElement | null;
-    scrollEl?.scrollIntoView({ block: "center", behavior: "smooth" });
     const later = window.setTimeout(measure, 320);
     window.addEventListener("resize", measure);
     window.addEventListener("scroll", measure, true);
+    const first = last
+      ? (document.querySelector('[data-zip-spot="drag"], [data-zip-spot="memo"]') as HTMLElement | null)
+      : (document.querySelector(`[data-zip-spot="${item.spot}"]`) as HTMLElement | null);
+    first?.scrollIntoView({ block: "center", behavior: "smooth" });
     return () => {
       window.clearTimeout(later);
       window.removeEventListener("resize", measure);
       window.removeEventListener("scroll", measure, true);
     };
-  }, [item.spot, hasCustom, step]);
+  }, [item.spot, hasCustom, step, last]);
 
   const cardStyle = useMemo(() => {
     if (!box || !vp.w) return { top: "28%", left: "50%", transform: "translateX(-50%)" } as const;
@@ -701,22 +737,29 @@ function Onboarding({
     return { top, left, transform: "none" } as const;
   }, [box, vp]);
 
+  const holes = last
+    ? STEP5_CALLS.map((call) => boxes[call.spot]).filter((h): h is DOMRect => Boolean(h))
+    : box
+      ? [box]
+      : [];
+
   return (
     <div className="zip-onboard">
       <svg className="zip-mask" aria-hidden width={vp.w} height={vp.h} viewBox={`0 0 ${vp.w} ${vp.h}`} preserveAspectRatio="none">
         <defs>
           <mask id="zip-cut">
             <rect width="100%" height="100%" fill="white" />
-            {box ? (
+            {holes.map((h, i) => (
               <rect
-                x={Math.max(0, box.left - 8)}
-                y={Math.max(0, box.top - 8)}
-                width={box.width + 16}
-                height={box.height + 16}
-                rx="14"
+                key={i}
+                x={Math.max(0, h.left - 8)}
+                y={Math.max(0, h.top - 8)}
+                width={h.width + 16}
+                height={h.height + 16}
+                rx="10"
                 fill="black"
               />
-            ) : null}
+            ))}
           </mask>
         </defs>
         <rect width="100%" height="100%" fill="rgba(0,0,0,0.55)" mask="url(#zip-cut)" />
@@ -724,18 +767,44 @@ function Onboarding({
       <button className="zip-skip" type="button" onClick={onSkip}>
         건너뛰기
       </button>
-      <div className="zip-card" style={cardStyle}>
-        <h3>{item.title}</h3>
-        <p>{item.body}</p>
-        <div className="zip-dots">
-          {ONBOARD.map((_, i) => (
-            <i key={i} className={i === step ? "on" : undefined} />
-          ))}
+      {last ? (
+        <>
+          {STEP5_CALLS.map((call) => {
+            const h = boxes[call.spot];
+            if (!h || !vp.w) return null;
+            const left = Math.min(h.right + 14, vp.w - 240);
+            const top = Math.max(88, h.top - 4);
+            return (
+              <div key={call.spot} className="zip-callout" style={{ top, left }}>
+                {call.label}
+              </div>
+            );
+          })}
+          <div className="zip-card zip-card-last">
+            <div className="zip-dots">
+              {ONBOARD.map((_, i) => (
+                <i key={i} className={i === step ? "on" : undefined} />
+              ))}
+            </div>
+            <button className="btn primary" type="button" onClick={onNext}>
+              시작하기
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="zip-card" style={cardStyle}>
+          <h3>{item.title}</h3>
+          {item.body ? <p>{item.body}</p> : null}
+          <div className="zip-dots">
+            {ONBOARD.map((_, i) => (
+              <i key={i} className={i === step ? "on" : undefined} />
+            ))}
+          </div>
+          <button className="btn primary" type="button" onClick={onNext}>
+            다음 →
+          </button>
         </div>
-        <button className="btn primary" type="button" onClick={onNext}>
-          {last ? "시작하기" : "다음 →"}
-        </button>
-      </div>
+      )}
     </div>
   );
 }

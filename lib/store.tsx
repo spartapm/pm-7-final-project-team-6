@@ -200,6 +200,7 @@ type Store = AppState & {
   deleteTodo: (id: string) => void;
   setTipMemo: (id: string, memo: string) => void;
   moveTip: (id: string, folderId: string) => void;
+  reorderTips: (fromId: string, toId: string) => void;
   addZipFolder: (name: string) => { id: string; created: boolean };
   renameZipFolder: (id: string, name: string) => { id: string; created: boolean };
   deleteZipFolder: (id: string) => void;
@@ -573,6 +574,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const reorderTips = useCallback((fromId: string, toId: string) => {
+    if (fromId === toId) return;
+    setState((s) => {
+      const from = s.todos.find((t) => t.id === fromId);
+      const to = s.todos.find((t) => t.id === toId);
+      if (!from || !to) return s;
+      const toFolder = to.folderId || (to.done ? DONE_ID : UNSORTED_ID);
+      const moved =
+        toFolder === DONE_ID
+          ? {
+              ...from,
+              done: true,
+              folderId: DONE_ID,
+              sourceFolderName:
+                from.sourceFolderName ||
+                folderTitle(from.folderId && from.folderId !== DONE_ID ? from.folderId : UNSORTED_ID, s.prefs.zip.folders),
+            }
+          : { ...from, done: false, folderId: toFolder };
+      const without = s.todos.filter((t) => t.id !== fromId);
+      const at = without.findIndex((t) => t.id === toId);
+      if (at < 0) return s;
+      return { ...s, todos: [...without.slice(0, at), moved, ...without.slice(at)] };
+    });
+  }, []);
+
   const addZipFolder = useCallback((name: string) => {
     const next = normalizeName(name);
     let result = { id: "", created: false };
@@ -900,6 +926,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       deleteTodo,
       setTipMemo,
       moveTip,
+      reorderTips,
       addZipFolder,
       renameZipFolder,
       deleteZipFolder,
@@ -941,6 +968,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       deleteTodo,
       setTipMemo,
       moveTip,
+      reorderTips,
       addZipFolder,
       renameZipFolder,
       deleteZipFolder,
