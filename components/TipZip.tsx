@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { IconCheck, IconClose, IconDots, IconEdit, IconFolderMini, IconGrip, IconHelp, IconMemo, IconPin } from "./icons";
 import { formatDotDate } from "@/lib/format";
 import { useStore } from "@/lib/store";
@@ -76,7 +76,7 @@ export function TipZip() {
 
   const pulse = (id: string) => {
     setFlash(id);
-    window.setTimeout(() => setFlash(null), 900);
+    window.setTimeout(() => setFlash(null), 700);
   };
 
   const submitFolder = (raw: string) => {
@@ -196,20 +196,20 @@ export function TipZip() {
         onSubmit={submitFolder}
       />
 
-      {composer ? null : (
-        <button
-          className="zip-help-fab"
-          type="button"
-          aria-label="온보딩 다시 보기"
-          data-zip-spot="help"
-          onClick={() => {
-            setOnboardingDone(false);
-            setTour(0);
-          }}
-        >
-          <IconHelp />
-        </button>
-      )}
+      <button
+        className="zip-help-fab"
+        type="button"
+        aria-label="온보딩 다시 보기"
+        data-zip-spot="help"
+        onClick={() => {
+          setComposer(false);
+          setName("");
+          setOnboardingDone(false);
+          setTour(0);
+        }}
+      >
+        <IconHelp />
+      </button>
 
       {tour !== null ? (
           <Onboarding
@@ -511,13 +511,34 @@ function TipCard({
 }) {
   const [memoOpen, setMemoOpen] = useState(Boolean(tip.memo));
   const [memo, setMemo] = useState(tip.memo ?? "");
+  const [popping, setPopping] = useState(false);
+  const popTimer = useRef<number | null>(null);
   const targets = [
     { id: UNSORTED_ID, name: "미분류 TIP" },
     ...folders.map((f) => ({ id: f.id, name: f.name })),
   ].filter((f) => f.id !== currentId && f.id !== DONE_ID);
 
+  useEffect(() => {
+    return () => {
+      if (popTimer.current) window.clearTimeout(popTimer.current);
+    };
+  }, []);
+
+  const onCheck = () => {
+    if (preview || popping) return;
+    if (tip.done) {
+      onToggle();
+      return;
+    }
+    setPopping(true);
+    popTimer.current = window.setTimeout(() => {
+      onToggle();
+      setPopping(false);
+    }, 200);
+  };
+
   return (
-    <article className={`zip-tip${tip.done ? " done" : ""}`}>
+    <article className={`zip-tip${tip.done || popping ? " done" : ""}`}>
       <button
         className="zip-grip tip-grip"
         type="button"
@@ -531,17 +552,18 @@ function TipCard({
       >
         <IconGrip />
       </button>
-      <button
-        className="check round"
-        type="button"
-        aria-label="완료"
-        data-zip-spot={checkSpot ? "check" : undefined}
-        onClick={() => {
-          if (!preview) onToggle();
-        }}
-      >
-        {tip.done ? <IconCheck /> : null}
-      </button>
+      <div className="zip-check">
+        <button
+          className={`check round${popping ? " popping" : ""}`}
+          type="button"
+          aria-label="완료"
+          data-zip-spot={checkSpot ? "check" : undefined}
+          onClick={onCheck}
+        >
+          {tip.done || popping ? <IconCheck /> : null}
+        </button>
+        {popping ? <span className="check-pop">완료!</span> : null}
+      </div>
       <div className="zip-tip-body">
         <div className="title-row">
           <div className="title">{tip.text}</div>

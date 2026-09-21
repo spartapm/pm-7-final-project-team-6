@@ -1621,7 +1621,7 @@ button { cursor: pointer; }
 .zip-spot .zip-fold-toggle { flex: none; }
 .zip-h-space { flex: 1; min-width: 8px; }
 .zip-add { scroll-margin-top: 128px; }
-.zip-folder.section-flash { animation: section-flash 0.9s ease; }
+.zip-folder.section-flash { animation: section-flash 0.7s ease; }
 @keyframes section-flash {
   0%, 100% { box-shadow: none; }
   30% { box-shadow: 0 0 0 3px var(--lime); }
@@ -1674,6 +1674,39 @@ button { cursor: pointer; }
   align-items: start;
 }
 .zip-tip .tip-grip { padding-top: 6px; color: #6b7280; }
+.zip-check { position: relative; width: 18px; height: 18px; margin-top: 2px; }
+.zip-check .check { margin-top: 0; }
+.check.round.popping {
+  background: #111;
+  color: var(--lime);
+  border-color: #111;
+  animation: check-bounce 200ms ease;
+}
+.check-pop {
+  position: absolute;
+  left: 22px;
+  top: -10px;
+  background: #ff6b1a;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  z-index: 3;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: check-pop 200ms ease;
+}
+@keyframes check-pop {
+  0% { transform: translateY(4px) scale(0.7); opacity: 0; }
+  70% { transform: translateY(-1px) scale(1.06); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes check-bounce {
+  0% { transform: scale(0.82); }
+  70% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
 .zip-tip.done .title { color: var(--gray-done); text-decoration: line-through; }
 .zip-tip-body .title { font-size: 15px; font-weight: 600; letter-spacing: -0.02em; overflow-wrap: anywhere; }
 .zip-tip-body .title-row { display: flex; align-items: flex-start; gap: 6px; }
@@ -1742,7 +1775,7 @@ button { cursor: pointer; }
 .zip-help-fab {
   position: fixed; right: 36px; bottom: 36px; width: 40px; height: 40px;
   border-radius: 99px; border: 0; background: #111; color: #fff;
-  display: grid; place-items: center; z-index: 34; box-shadow: var(--shadow);
+  display: grid; place-items: center; z-index: 40; box-shadow: var(--shadow);
 }
 .zip-onboard { position: fixed; inset: 0; z-index: 80; }
 .zip-mask { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
