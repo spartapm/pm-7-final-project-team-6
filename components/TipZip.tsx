@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { IconCheck, IconClose, IconDots, IconEdit, IconFolderMini, IconGrip, IconHelp, IconMemo, IconPencil } from "./icons";
+import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
+import { IconCheck, IconEdit, IconFolderMini, IconGrip, IconHelp, IconMemo, IconPencil, IconTrash } from "./icons";
 import { formatDotDate } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import type { UserTodo, ZipFolder } from "@/lib/types";
@@ -38,9 +38,9 @@ const ONBOARD = [
 ] as const;
 
 const STEP5_CALLS = [
-  { spot: "drag", label: "드래그 해서 폴더 순서를 바꿀 수 있어요", side: "left" as const, w: 228, h: 40, hole: 8 },
-  { spot: "move", label: "TIP을 다른 폴더로 옮길 수 있어요", side: "right" as const, w: 228, h: 40, hole: 8 },
-  { spot: "memo", label: "내 생각을 메모로 남겨보세요", side: "left" as const, w: 240, h: 100, cta: true, hole: 18 },
+  { spot: "drag", label: "드래그 해서 폴더 순서를 바꿀 수 있어요", side: "left" as const, w: 228, h: 40, hole: 6 },
+  { spot: "move", label: "TIP을 다른 폴더로 옮길 수 있어요", side: "right" as const, w: 228, h: 40, hole: 6 },
+  { spot: "memo", label: "내 생각을 메모로 남겨보세요", side: "left" as const, w: 240, h: 100, cta: true, hole: 4 },
 ] as const;
 
 type Box = { l: number; t: number; w: number; h: number };
@@ -78,6 +78,26 @@ function placeCallout(
   return { top: box.t, left: box.l, point, box };
 }
 
+function dragExempt(target: EventTarget | null) {
+  return Boolean((target as HTMLElement | null)?.closest?.("[data-no-drag]"));
+}
+
+function beginGhostDrag(e: DragEvent, key: string, id: string, source: HTMLElement) {
+  if (dragExempt(e.target)) {
+    e.preventDefault();
+    return false;
+  }
+  e.dataTransfer.setData(key, id);
+  e.dataTransfer.effectAllowed = "move";
+  const ghost = source.cloneNode(true) as HTMLElement;
+  ghost.setAttribute("aria-hidden", "true");
+  ghost.style.cssText = `position:absolute;top:-1200px;left:0;width:${source.offsetWidth}px;opacity:0.5;pointer-events:none;box-sizing:border-box;`;
+  document.body.appendChild(ghost);
+  e.dataTransfer.setDragImage(ghost, Math.min(36, source.offsetWidth / 5), 18);
+  window.setTimeout(() => ghost.remove(), 0);
+  return true;
+}
+
 const TOUR_DEMO_TIP: UserTodo = {
   id: "tour-demo-tip",
   text: "오프라인 매장에 냉담 인증샷 포인트 1개 기획하기",
@@ -110,7 +130,7 @@ export function TipZip() {
   const [composer, setComposer] = useState(false);
   const [name, setName] = useState("");
   const [flash, setFlash] = useState<string | null>(null);
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [dragging, setDragging] = useState<string | null>(null);
 
   const allEmpty = todos.length === 0;
   const customIds = folders.map((f) => f.id);
@@ -163,8 +183,8 @@ export function TipZip() {
             collapsed={!touring && prefs.zip.doneCollapsed}
             flash={flash === DONE_ID}
             spot="done"
-            openMenu={openMenu}
-            setOpenMenu={setOpenMenu}
+            dragging={dragging}
+            onDragging={setDragging}
             onToggle={() => toggleZipFolder(DONE_ID)}
             onToggleTip={toggleTodo}
             onMemo={setTipMemo}
@@ -185,8 +205,8 @@ export function TipZip() {
             spot="unsorted"
             checkSpot
             preview={showTourCheck}
-            openMenu={openMenu}
-            setOpenMenu={setOpenMenu}
+            dragging={dragging}
+            onDragging={setDragging}
             onToggle={() => toggleZipFolder(UNSORTED_ID)}
             onToggleTip={toggleTodo}
             onMemo={setTipMemo}
@@ -208,8 +228,8 @@ export function TipZip() {
               spot={i === 0 ? "drag" : undefined}
               actionSpot={lastTour && i === 0}
               preview={i === 0 && showTourActionTip}
-              openMenu={openMenu}
-              setOpenMenu={setOpenMenu}
+              dragging={dragging}
+              onDragging={setDragging}
               onToggle={() => toggleZipFolder(f.id)}
               onRename={(next) => {
                 const res = renameZipFolder(f.id, next);
@@ -235,8 +255,8 @@ export function TipZip() {
               spot="drag"
               actionSpot={lastTour}
               preview
-              openMenu={null}
-              setOpenMenu={() => undefined}
+              dragging={null}
+              onDragging={() => undefined}
               onToggleTip={() => undefined}
               onMemo={() => undefined}
               onMove={() => undefined}
@@ -375,7 +395,6 @@ function ZipFolderCard({
   id,
   title,
   todos,
-  folders,
   fixed,
   unsorted,
   collapsed,
@@ -384,14 +403,13 @@ function ZipFolderCard({
   checkSpot,
   actionSpot,
   preview,
-  openMenu,
-  setOpenMenu,
+  dragging,
+  onDragging,
   onToggle,
   onRename,
   onDelete,
   onToggleTip,
   onMemo,
-  onMove,
   onReorderTip,
   onEditTip,
   onDeleteTip,
@@ -401,7 +419,7 @@ function ZipFolderCard({
   id: string;
   title: string;
   todos: UserTodo[];
-  folders: ZipFolder[];
+  folders?: ZipFolder[];
   fixed?: boolean;
   unsorted?: boolean;
   collapsed?: boolean;
@@ -410,14 +428,14 @@ function ZipFolderCard({
   checkSpot?: boolean;
   actionSpot?: boolean;
   preview?: boolean;
-  openMenu: string | null;
-  setOpenMenu: (id: string | null) => void;
+  dragging: string | null;
+  onDragging: (id: string | null) => void;
   onToggle?: () => void;
   onRename?: (name: string) => void;
   onDelete?: () => void;
   onToggleTip: (id: string) => void;
   onMemo: (id: string, memo: string) => void;
-  onMove: (id: string, folderId: string) => void;
+  onMove?: (id: string, folderId: string) => void;
   onReorderTip?: (fromId: string, toId: string) => void;
   onEditTip?: (id: string, text: string) => void;
   onDeleteTip: (id: string) => void;
@@ -427,10 +445,11 @@ function ZipFolderCard({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(title);
   const shut = Boolean(collapsed) && !preview;
+  const canDragFolder = !fixed && !preview;
 
   return (
     <section
-      className={`zip-folder${fixed ? " fixed" : ""}${unsorted ? " unsorted" : ""}${shut ? " collapsed" : ""}${flash ? " section-flash" : ""}${preview ? " preview" : ""}`}
+      className={`zip-folder${fixed ? " fixed" : ""}${unsorted ? " unsorted" : ""}${shut ? " collapsed" : ""}${flash ? " section-flash" : ""}${preview ? " preview" : ""}${dragging === id ? " dragging" : ""}`}
       onDragOver={(e) => {
         if (preview) return;
         if (onDropFolder || onDropTip) e.preventDefault();
@@ -444,22 +463,20 @@ function ZipFolderCard({
         if (tipFrom && onDropTip) onDropTip(tipFrom);
       }}
     >
-      <header className="zip-folder-h">
+      <header
+        className="zip-folder-h"
+        draggable={canDragFolder && !editing}
+        onDragStart={(e) => {
+          if (!canDragFolder) return;
+          const ok = beginGhostDrag(e, "zip-folder", id, e.currentTarget.closest(".zip-folder") as HTMLElement);
+          if (ok) onDragging(id);
+        }}
+        onDragEnd={() => onDragging(null)}
+      >
         {fixed ? null : (
-          <button
-            className="zip-grip"
-            type="button"
-            aria-label="드래그 핸들"
-            data-zip-spot={spot === "drag" ? "drag" : undefined}
-            draggable={!preview}
-            onDragStart={(e) => {
-              if (preview) return;
-              e.dataTransfer.setData("zip-folder", id);
-              e.dataTransfer.effectAllowed = "move";
-            }}
-          >
+          <span className="zip-grip" aria-hidden data-zip-spot={spot === "drag" ? "drag" : undefined}>
             <IconGrip />
-          </button>
+          </span>
         )}
         <div className="zip-spot" data-zip-spot={spot && spot !== "drag" ? spot : undefined}>
           <span className="zip-folder-ico" aria-hidden>
@@ -480,6 +497,7 @@ function ZipFolderCard({
                 className="zip-rename-inline"
                 value={draft}
                 autoFocus
+                data-no-drag
                 aria-label="폴더 이름"
                 onChange={(e) => setDraft(e.target.value)}
                 onBlur={() => {
@@ -504,6 +522,7 @@ function ZipFolderCard({
           <button
             className="ghost"
             type="button"
+            data-no-drag
             aria-label="폴더 이름 수정"
             onClick={() => {
               setDraft(title);
@@ -513,12 +532,12 @@ function ZipFolderCard({
             <IconEdit />
           </button>
         )}
+        </div>
         {fixed || !onDelete ? null : (
-          <button className="ghost muted-x" type="button" aria-label="폴더 삭제" onClick={onDelete}>
-            <IconClose />
+          <button className="ghost zip-trash" type="button" data-no-drag aria-label="폴더 삭제" onClick={onDelete}>
+            <IconTrash />
           </button>
         )}
-        </div>
       </header>
       {shut ? null : (
         <div className="zip-tips">
@@ -529,20 +548,13 @@ function ZipFolderCard({
               <TipCard
                 key={t.id}
                 tip={t}
-                folders={folders}
-                currentId={id}
                 checkSpot={checkSpot && i === 0}
                 actionSpot={actionSpot && i === 0}
                 preview={preview}
-                menuOpen={openMenu === t.id}
-                onMenu={() => setOpenMenu(openMenu === t.id ? null : t.id)}
-                onCloseMenu={() => setOpenMenu(null)}
+                dragging={dragging === t.id}
+                onDragging={onDragging}
                 onToggle={() => onToggleTip(t.id)}
                 onMemo={(memo) => onMemo(t.id, memo)}
-                onMove={(folderId) => {
-                  onMove(t.id, folderId);
-                  setOpenMenu(null);
-                }}
                 onReorder={onReorderTip}
                 onEdit={onEditTip}
                 onDelete={() => onDeleteTip(t.id)}
@@ -557,33 +569,25 @@ function ZipFolderCard({
 
 function TipCard({
   tip,
-  folders,
-  currentId,
   checkSpot,
   actionSpot,
   preview,
-  menuOpen,
-  onMenu,
-  onCloseMenu,
+  dragging,
+  onDragging,
   onToggle,
   onMemo,
-  onMove,
   onReorder,
   onEdit,
   onDelete,
 }: {
   tip: UserTodo;
-  folders: ZipFolder[];
-  currentId: string;
   checkSpot?: boolean;
   actionSpot?: boolean;
   preview?: boolean;
-  menuOpen: boolean;
-  onMenu: () => void;
-  onCloseMenu: () => void;
+  dragging: boolean;
+  onDragging: (id: string | null) => void;
   onToggle: () => void;
   onMemo: (memo: string) => void;
-  onMove: (folderId: string) => void;
   onReorder?: (fromId: string, toId: string) => void;
   onEdit?: (id: string, text: string) => void;
   onDelete: () => void;
@@ -596,10 +600,6 @@ function TipCard({
   const memoDirty = memo !== savedMemo;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(tip.text);
-  const targets = [
-    { id: UNSORTED_ID, name: "미분류 TIP" },
-    ...folders.map((f) => ({ id: f.id, name: f.name })),
-  ].filter((f) => f.id !== currentId && f.id !== DONE_ID);
 
   useEffect(() => {
     setMemo(savedMemo);
@@ -630,7 +630,15 @@ function TipCard({
 
   return (
     <article
-      className={`zip-tip${tip.done || popping ? " done" : ""}`}
+      className={`zip-tip${tip.done || popping ? " done" : ""}${dragging ? " dragging" : ""}`}
+      draggable={!preview}
+      onDragStart={(e) => {
+        if (preview) return;
+        e.stopPropagation();
+        const ok = beginGhostDrag(e, "zip-tip", tip.id, e.currentTarget);
+        if (ok) onDragging(tip.id);
+      }}
+      onDragEnd={() => onDragging(null)}
       onDragOver={(e) => {
         if (preview || !onReorder) return;
         e.preventDefault();
@@ -645,24 +653,14 @@ function TipCard({
         onReorder(from, tip.id);
       }}
     >
-      <button
-        className="zip-grip tip-grip"
-        type="button"
-        aria-label="TIP 드래그 핸들"
-        data-zip-spot={actionSpot ? "move" : undefined}
-        draggable={!preview}
-        onDragStart={(e) => {
-          if (preview) return;
-          e.dataTransfer.setData("zip-tip", tip.id);
-          e.dataTransfer.effectAllowed = "move";
-        }}
-      >
+      <span className="zip-grip tip-grip" aria-hidden data-zip-spot={actionSpot ? "move" : undefined}>
         <IconGrip />
-      </button>
+      </span>
       <div className="zip-check">
         <button
           className={`check round${popping ? " popping" : ""}`}
           type="button"
+          data-no-drag
           aria-label="완료"
           data-zip-spot={checkSpot ? "check" : undefined}
           onClick={onCheck}
@@ -678,6 +676,7 @@ function TipCard({
               className="zip-tip-edit"
               value={draft}
               autoFocus
+              data-no-drag
               maxLength={TODO_MAX}
               onChange={(e) => setDraft(e.target.value)}
               onBlur={() => {
@@ -699,6 +698,7 @@ function TipCard({
             <button
               className="ghost zip-tip-edit-btn"
               type="button"
+              data-no-drag
               aria-label="TIP 문구 수정"
               onClick={() => {
                 setDraft(tip.text);
@@ -708,40 +708,21 @@ function TipCard({
               <IconPencil />
             </button>
           )}
-          <span className="zip-memo-spot" data-zip-spot={actionSpot ? "memo" : undefined}>
-            <button
-              className={`ghost memo-btn${tip.memo ? " has" : ""}`}
-              type="button"
-              aria-label="메모"
-              onClick={() => setMemoOpen((v) => !v)}
-            >
-              <IconMemo filled={Boolean(tip.memo)} />
-            </button>
-          </span>
-          <div className="zip-more">
-            <button className="ghost" type="button" aria-label="이동 메뉴" onClick={onMenu}>
-              <IconDots />
-            </button>
-            {menuOpen ? (
-              <div className="zip-menu">
-                <p>다른 폴더로 이동</p>
-                {targets.map((f) => (
-                  <button key={f.id} type="button" onClick={() => onMove(f.id)}>
-                    {f.name}
-                  </button>
-                ))}
-                <button type="button" className="danger" onClick={onDelete}>
-                  삭제
-                </button>
-                <button type="button" onClick={onCloseMenu}>
-                  닫기
-                </button>
-              </div>
-            ) : null}
-          </div>
-          <button className="ghost muted-x" type="button" aria-label="TIP 삭제" onClick={onDelete}>
-            <IconClose />
+          <button
+            className={`ghost memo-btn${tip.memo ? " has" : ""}`}
+            type="button"
+            data-no-drag
+            aria-label="메모"
+            data-zip-spot={actionSpot ? "memo" : undefined}
+            onClick={() => setMemoOpen((v) => !v)}
+          >
+            <IconMemo filled={Boolean(tip.memo)} />
           </button>
+          {preview ? null : (
+            <button className="ghost zip-trash" type="button" data-no-drag aria-label="TIP 삭제" onClick={onDelete}>
+              <IconTrash />
+            </button>
+          )}
         </div>
         <div className="meta">
           {tip.sourceArticleId ? (
@@ -826,6 +807,8 @@ function Onboarding({
     const later2 = last ? window.setTimeout(measure, 700) : 0;
     window.addEventListener("resize", measure);
     window.addEventListener("scroll", measure, true);
+    window.visualViewport?.addEventListener("resize", measure);
+    window.visualViewport?.addEventListener("scroll", measure);
     const first = last
       ? (document.querySelector('[data-zip-spot="drag"]') as HTMLElement | null)
       : (document.querySelector(`[data-zip-spot="${item.spot}"]`) as HTMLElement | null);
@@ -836,6 +819,8 @@ function Onboarding({
       if (later2) window.clearTimeout(later2);
       window.removeEventListener("resize", measure);
       window.removeEventListener("scroll", measure, true);
+      window.visualViewport?.removeEventListener("resize", measure);
+      window.visualViewport?.removeEventListener("scroll", measure);
     };
   }, [item.spot, hasCustom, step, last]);
 
@@ -866,9 +851,8 @@ function Onboarding({
         const h = boxes[call.spot];
         if (!h) return [];
         const pad = call.hole;
-        const min = call.spot === "memo" ? 48 : 0;
-        const w = Math.max(h.width + pad * 2, min);
-        const ht = Math.max(h.height + pad * 2, min);
+        const w = h.width + pad * 2;
+        const ht = h.height + pad * 2;
         return [
           {
             left: h.left + h.width / 2 - w / 2,

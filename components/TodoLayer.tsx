@@ -26,7 +26,8 @@ export function TodoLayer({
     addNote,
     showToast,
   } = useStore();
-  const [open, setOpen] = useState(false);
+  const hasTodos = article.todos.length > 0;
+  const [open, setOpen] = useState(hasTodos);
   const [seen, setSeen] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
   const [composer, setComposer] = useState(false);
@@ -34,7 +35,6 @@ export function TodoLayer({
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState("");
-  const hasTodos = article.todos.length > 0;
   const saved = isSaved(article.id);
 
   const textOf = (todo: { id: string; text: string }) => edits[todo.id] ?? todo.text;

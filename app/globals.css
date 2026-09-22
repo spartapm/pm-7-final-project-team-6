@@ -40,7 +40,7 @@ button, input, textarea, select { font-family: inherit; }
 button { cursor: pointer; }
 
 .site {
-  min-width: 1180px;
+  min-width: 1280px;
   background: var(--white);
 }
 
@@ -574,7 +574,7 @@ button { cursor: pointer; }
 }
 .article-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 720px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 720px) minmax(410px, 1fr);
   column-gap: 16px;
   align-items: start;
 }
@@ -583,21 +583,26 @@ button { cursor: pointer; }
   width: 100%;
   max-width: 720px;
   margin: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 .article-tools {
-  position: fixed;
+  grid-column: 3;
+  justify-self: start;
+  position: sticky;
   top: 140px;
-  left: min(calc(50% + 372px), max(16px, calc(100vw - 72px)));
+  left: auto;
   display: flex;
   flex-direction: row;
   align-items: flex-start;
   gap: 12px;
   z-index: 36;
-  max-width: min(410px, calc(100vw - 32px));
+  width: max-content;
+  max-width: 100%;
   pointer-events: none;
 }
 .article-tools.open {
-  left: min(calc(50% + 372px), max(16px, calc(100vw - 424px)));
+  left: auto;
 }
 .article-tools > * {
   pointer-events: auto;
@@ -1621,7 +1626,7 @@ button { cursor: pointer; }
   align-items: center;
   gap: 8px;
   min-width: 0;
-  flex: none;
+  flex: 1;
 }
 .zip-spot .zip-fold-toggle { flex: 1; min-width: 0; }
 .zip-h-space { flex: 1; min-width: 8px; }
@@ -1636,7 +1641,13 @@ button { cursor: pointer; }
   padding: 12px 14px;
   background: #fff;
   border-radius: 13px 13px 0 0;
+  cursor: grab;
 }
+.zip-folder.fixed .zip-folder-h { cursor: default; }
+.zip-folder-h:active:not(:has([data-no-drag]:active)),
+.zip-tip:active:not(:has([data-no-drag]:active)) { cursor: grabbing; }
+.zip-folder.dragging,
+.zip-tip.dragging { opacity: 0.5; }
 .zip-folder.fixed .zip-folder-h {
   background: #efefee;
 }
@@ -1714,20 +1725,12 @@ button { cursor: pointer; }
   outline: none;
   letter-spacing: -0.02em;
 }
-.zip-memo-spot {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
+.zip-trash {
+  color: #6b7280;
   flex: none;
-  border-radius: 8px;
+  margin-left: auto;
 }
-.zip-board-tour-last .zip-memo-spot[data-zip-spot="memo"] {
-  width: 44px;
-  height: 44px;
-  background: #fff;
-  box-shadow: 0 0 0 3px #fff;
-}
+.zip-trash:hover { color: #111; }
 .zip-tips { padding: 0 8px 12px; background: #fff; border-radius: 0 0 13px 13px; }
 .zip-folder.fixed .zip-tips { background: #efefee; }
 .zip-folder-empty { color: var(--gray-body); font-size: 13px; padding: 18px 12px 12px; }
@@ -1738,6 +1741,7 @@ button { cursor: pointer; }
   padding: 14px 8px;
   border-top: 1px solid var(--gray-line);
   align-items: start;
+  cursor: grab;
 }
 .zip-tip .tip-grip { padding-top: 6px; color: #6b7280; }
 .zip-check { position: relative; width: 18px; height: 18px; margin-top: 2px; }

@@ -120,6 +120,15 @@ export function IconClose() {
   );
 }
 
+export function IconTrash() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path d="M3.2 4.2h9.6M6.2 4.2V3.1h3.6v1.1M4.4 4.2l.6 8.2h5.8l.6-8.2" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M6.6 6.4v4.2M9.4 6.4v4.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function IconPlus() {
   return (
     <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden>
