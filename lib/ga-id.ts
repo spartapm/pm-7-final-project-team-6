@@ -1,2 +1,4 @@
 export const GA_MEASUREMENT_ID =
   process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || "G-W62LXGY07Y";
+
+export const GTM_CONTAINER_ID = "GTM-5M66QGZT";
