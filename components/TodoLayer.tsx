@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { IconBookmark, IconBulb, IconCheck, IconHighlight, IconPencil, IconPlusSm, IconShare, IconTop } from "./icons";
+import { markAutoCardView, setTipCardOpen, track } from "@/lib/analytics";
 import { useStore } from "@/lib/store";
 import type { Article } from "@/lib/types";
 import { TODO_MAX } from "@/lib/types";
@@ -36,6 +37,25 @@ export function TodoLayer({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState("");
   const saved = isSaved(article.id);
+  const triggerRef = useRef<"auto" | "reopen">(hasTodos ? "auto" : "auto");
+  const savedThisOpen = useRef(false);
+
+  useEffect(() => {
+    setTipCardOpen(Boolean(hasTodos && open && !composer));
+    return () => setTipCardOpen(false);
+  }, [hasTodos, open, composer]);
+
+  useEffect(() => {
+    if (!hasTodos || !open) return;
+    if (!markAutoCardView(article.id)) return;
+    triggerRef.current = "auto";
+    savedThisOpen.current = false;
+    track("tip_card_view", {
+      content_id: article.id,
+      items_shown: article.todos.length,
+      trigger: "auto",
+    });
+  }, [article.id, article.todos.length, hasTodos, open]);
 
   const textOf = (todo: { id: string; text: string }) => edits[todo.id] ?? todo.text;
 
@@ -45,7 +65,16 @@ export function TodoLayer({
       removeTodoFromArticle(next);
       return;
     }
-    addTodoFromArticle(article, next);
+    const added = addTodoFromArticle(article, next);
+    if (added) {
+      savedThisOpen.current = true;
+      track("tip_list_save", {
+        content_id: article.id,
+        items_saved: 1,
+        text_edited: next.text !== todo.text,
+        trigger: triggerRef.current,
+      });
+    }
     setFlash(todo.id);
     window.setTimeout(() => setFlash(null), 1400);
   };
@@ -111,10 +140,24 @@ export function TodoLayer({
             aria-label="일잘 TIP"
             onClick={() => {
               setComposer(false);
-              setOpen((v) => {
-                if (!v) setSeen(true);
-                return !v;
+              if (open) {
+                track("tip_icon_click", { content_id: article.id, action: "close" });
+                if (!savedThisOpen.current) {
+                  track("tip_card_close", { content_id: article.id, close_method: "icon_toggle" });
+                }
+                setOpen(false);
+                return;
+              }
+              setSeen(true);
+              triggerRef.current = "reopen";
+              savedThisOpen.current = false;
+              track("tip_icon_click", { content_id: article.id, action: "reopen" });
+              track("tip_card_view", {
+                content_id: article.id,
+                items_shown: article.todos.length,
+                trigger: "reopen",
               });
+              setOpen(true);
             }}
           >
             <IconBulb />
@@ -159,7 +202,16 @@ export function TodoLayer({
         <aside className="panel">
           <div className="panel-h">
             <span>업무에 적용해 볼 만한 일잘TIP을 담아보세요!</span>
-            <button type="button" onClick={() => setOpen(false)} aria-label="닫기">
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                if (!savedThisOpen.current) {
+                  track("tip_card_close", { content_id: article.id, close_method: "inline_x" });
+                }
+              }}
+              aria-label="닫기"
+            >
               ×
             </button>
           </div>

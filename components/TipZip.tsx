@@ -8,6 +8,7 @@ import { useStore } from "@/lib/store";
 import type { UserTodo, ZipFolder } from "@/lib/types";
 import { TODO_MAX } from "@/lib/types";
 import { DONE_ID, FOLDER_SUGGESTIONS, UNSORTED_ID, folderTitle, tipsIn } from "@/lib/zip";
+import type { FolderNameSource } from "@/lib/analytics";
 
 const ONBOARD = [
   {
@@ -147,8 +148,8 @@ export function TipZip() {
     window.setTimeout(() => setFlash(null), 700);
   };
 
-  const submitFolder = (raw: string) => {
-    const res = addZipFolder(raw);
+  const submitFolder = (raw: string, nameSource: FolderNameSource = "direct_input") => {
+    const res = addZipFolder(raw, nameSource);
     if (!res.id) return;
     setComposer(false);
     setName("");
@@ -331,7 +332,7 @@ function AddFolder({
   onOpen: () => void;
   onName: (v: string) => void;
   onCancel: () => void;
-  onSubmit: (name: string) => void;
+  onSubmit: (name: string, nameSource?: FolderNameSource) => void;
 }) {
   const q = name.trim().toLowerCase();
   const filtered = FOLDER_SUGGESTIONS.filter((s) => !q || s.toLowerCase().includes(q));
@@ -363,18 +364,18 @@ function AddFolder({
         placeholder="폴더 이름을 입력하세요"
         onChange={(e) => onName(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Enter") onSubmit(name);
+          if (e.key === "Enter") onSubmit(name, "direct_input");
         }}
       />
       <div className="zip-suggest">
         {filtered.map((s) => (
-          <button key={s} type="button" onClick={() => onSubmit(s)}>
+          <button key={s} type="button" onClick={() => onSubmit(s, "recommended")}>
             <span>추천</span>
             {s}
           </button>
         ))}
         {showCreate ? (
-          <button type="button" onClick={() => onSubmit(name)}>
+          <button type="button" onClick={() => onSubmit(name, "direct_input")}>
             + “{name.trim()}” 폴더 만들기
           </button>
         ) : null}
@@ -383,7 +384,7 @@ function AddFolder({
         <button className="btn ghost" type="button" onClick={onCancel}>
           취소
         </button>
-        <button className="btn primary" type="button" onClick={() => onSubmit(name)}>
+        <button className="btn primary" type="button" onClick={() => onSubmit(name, "direct_input")}>
           추가
         </button>
       </div>

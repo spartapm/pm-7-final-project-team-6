@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArticleBody, extractToc } from "@/components/ArticleBody";
 import { SiteShell } from "@/components/chrome";
 import { TodoLayer } from "@/components/TodoLayer";
@@ -10,6 +10,7 @@ import { getArticleManuscript } from "@/lib/bodies";
 import { formatDotDate } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import type { ArticleVisual } from "@/lib/types";
+import { useContentAnalytics } from "@/lib/use-content-analytics";
 
 function ArticleVisualBlock({ visual, caption, compact }: { visual: ArticleVisual; caption?: string; compact?: boolean }) {
   return (
@@ -26,8 +27,15 @@ export default function ArticlePage() {
   const { articles, markRead } = useStore();
   const article = articles.find((a) => a.id === id);
   const [scale, setScale] = useState(1);
+  const bodyRef = useRef<HTMLDivElement>(null);
   const manuscript = article ? getArticleManuscript(article.id) : null;
   const manuscriptToc = manuscript ? extractToc(manuscript.markdown) : [];
+
+  useContentAnalytics({
+    contentId: article?.id ?? "",
+    hasTip: Boolean(article?.todos.length),
+    bodyRef,
+  });
 
   useEffect(() => {
     if (article) markRead(article.id);
@@ -93,40 +101,43 @@ export default function ArticlePage() {
                 </div>
               </div>
             ) : null}
-            {manuscript ? (
-              <ArticleBody markdown={manuscript.markdown} images={manuscript.images} />
-            ) : (
-              <>
-                {article.lead ? <p className="lead">{article.lead}</p> : null}
-                {article.heroQuote ? (
-                  <div className="quote">
-                    <i />
-                    <div>
-                      <p>“{article.heroQuote}”</p>
-                    </div>
-                  </div>
-                ) : null}
-                {article.id === "chaekeup" ? (
-                  <div className="def-box">
-                    <b>책없쾌</b> 책임 없는 쾌락의 줄임말. 돈·시간·감정을 많이 쓰지 않고도 기분 전환이 되는 경험.
-                  </div>
-                ) : null}
-                {article.sections.map((s) => (
-                  <section key={s.id} id={s.id}>
-                    <h2>{s.heading}</h2>
-                    {s.visual ? <ArticleVisualBlock visual={s.visual} caption={s.caption} /> : null}
-                    <p className="body">{s.body}</p>
-                    {s.visuals?.length ? (
-                      <div className={`article-visual-grid cols-${Math.min(s.visuals.length, 3)}`}>
-                        {s.visuals.map((v) => (
-                          <ArticleVisualBlock key={v.title} visual={v} compact />
-                        ))}
+            <div className="article-body" ref={bodyRef}>
+              <span className="article-scroll-mark" aria-hidden />
+              {manuscript ? (
+                <ArticleBody markdown={manuscript.markdown} images={manuscript.images} />
+              ) : (
+                <>
+                  {article.lead ? <p className="lead">{article.lead}</p> : null}
+                  {article.heroQuote ? (
+                    <div className="quote">
+                      <i />
+                      <div>
+                        <p>“{article.heroQuote}”</p>
                       </div>
-                    ) : null}
-                  </section>
-                ))}
-              </>
-            )}
+                    </div>
+                  ) : null}
+                  {article.id === "chaekeup" ? (
+                    <div className="def-box">
+                      <b>책없쾌</b> 책임 없는 쾌락의 줄임말. 돈·시간·감정을 많이 쓰지 않고도 기분 전환이 되는 경험.
+                    </div>
+                  ) : null}
+                  {article.sections.map((s) => (
+                    <section key={s.id} id={s.id}>
+                      <h2>{s.heading}</h2>
+                      {s.visual ? <ArticleVisualBlock visual={s.visual} caption={s.caption} /> : null}
+                      <p className="body">{s.body}</p>
+                      {s.visuals?.length ? (
+                        <div className={`article-visual-grid cols-${Math.min(s.visuals.length, 3)}`}>
+                          {s.visuals.map((v) => (
+                            <ArticleVisualBlock key={v.title} visual={v} compact />
+                          ))}
+                        </div>
+                      ) : null}
+                    </section>
+                  ))}
+                </>
+              )}
+            </div>
           </div>
           <TodoLayer
             article={article}

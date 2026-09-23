@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { Providers } from "./providers";
+import { GA_MEASUREMENT_ID } from "@/lib/ga-id";
 
 export const metadata: Metadata = {
   title: "캐릿 Careet",
@@ -22,6 +24,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
       <body>
+        <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} strategy="afterInteractive" />
+        <Script id="ga4-gtag" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            window.gtag = gtag;
+            gtag('js', new Date());
+            gtag('config', '${GA_MEASUREMENT_ID}', {
+              send_page_view: true,
+              debug_mode: ${JSON.stringify(process.env.NODE_ENV === "development")}
+            });
+          `}
+        </Script>
         <Providers>{children}</Providers>
       </body>
     </html>

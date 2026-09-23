@@ -586,6 +586,17 @@ button { cursor: pointer; }
   min-width: 0;
   overflow: hidden;
 }
+.article-body {
+  position: relative;
+}
+.article-scroll-mark {
+  position: absolute;
+  top: 70%;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
 .article-tools {
   grid-column: 3;
   justify-self: start;
